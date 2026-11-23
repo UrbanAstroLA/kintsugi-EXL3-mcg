@@ -31,6 +31,9 @@ A complete `K ∈ {3, 4}` MCG EXL3 fit library (`mcg_multiplier = 3417055213`, i
 | [`docs/BASELINES.md`](docs/BASELINES.md) | Published baseline numbers from `cuteafd-eval` and `local-inference-evals` |
 | [`docs/PHASE0-INVENTORY.md`](docs/PHASE0-INVENTORY.md) | Zero-GPU checkpoint audit, byte-identity checks, and loader contract verification |
 | [`results/phase0/PHASE0-SUMMARY.md`](results/phase0/PHASE0-SUMMARY.md) | Verified Phase 0 stitcher (`L0.1–L0.2`) and CuteAFD `v6.0.0` CPU planner (`L0.3`) receipts |
+| [`results/phase1/PHASE1-SUMMARY.md`](results/phase1/PHASE1-SUMMARY.md) | Verified Phase 1 determinism (`L1.1`), `B_close` margin probe (`L1.2`), and calibration offset (`L1.3`) receipts |
+| [`protocols/PHASE1.md`](protocols/PHASE1.md) | Frozen Phase 1 protocol |
+| [`protocols/PHASE2.md`](protocols/PHASE2.md) | Frozen Phase 2 Stage 2A/2B layer-band and routing-targeted localization protocol |
 | [`evidence/LINES.md`](evidence/LINES.md) | Pre-registered decision lines per phase |
 | [`evidence/EVIDENCE.md`](evidence/EVIDENCE.md) | Numbered evidence rows traced to artifacts |
 | [`tools/stitch_exl3.py`](tools/stitch_exl3.py) | Zero-dependency per-layer EXL3-MCG checkpoint stitcher and SHA-256 verifier |
@@ -42,8 +45,8 @@ A complete `K ∈ {3, 4}` MCG EXL3 fit library (`mcg_multiplier = 3417055213`, i
 | Phase | Status | Engine | GPU Time | Wall ETA | Key Outcome |
 |---|---|---|---|---|---|
 | **Phase 0** — Stitcher & planner verification | **PASS (`L0.1–L0.3`)** | CPU / CuteAFD `v6.0.0` planner | `0 h` | Done (`~6 min`) | `0` header/SHA mismatches; 4/4 `READY to serve`; `27–36 s` per incremental 6-layer band flip |
-| **Phase 1** — Determinism, library offset & two-component margin probe | Next | CuteAFD `v6.0.0` | `~1.5–1.8 h` | `~2 h` | Verify Step 0b, library offset, and answer + termination margin probe |
-| **Phase 2** — Coarse 7-band damage map (+ optional role split) | Planned | CuteAFD `v6.0.0` | `~3.5–5.0 h` | `~3.5–5 h` | Locate task-sensitive sink bands and safe source bands |
+| **Phase 1** — Determinism, library offset & two-component margin probe | **PASS (`L1.1–L1.3`)** | CuteAFD `v6.0.0` | `~1.7 h` | Done (`~2.0 h`) | Exact `0.0` restart spread; `B_close` (`</think>`) `+0.277` nat K4 vs K3.25 (`+0.731` vs K3, `23/24`); `A_min` retired; `\|ΔKL_PB\| = 0.0006` |
+| **Phase 2** — Coarse 7-band damage map (+ Stage 2B role/routing split) | **In Progress (Stage 2A)** | CuteAFD `v6.0.0` | `~3.8–5.3 h` | `~3.8 h` (2A) + `~1.5 h` (2B) | 14 single-band flips (`B0..B6` up/down) on `B_close` + P-B KL |
 | **Phase 3** — Repair (`K3.35–K3.45` primary + `K3.25-iso` secondary) & confirmation | Planned | CuteAFD `v6.0.0` | `~7–11 h` | `~7–12 h` | Held-out margins, P-A/P-B KL, and 4K/127K tasks |
 | **Phase 4** — Cross-engine carry-over | Planned (gated) | vLLM fork `v0.9.2` | `~6.5–8 h` | `~6.5–8 h` | Tasks, `tool-eval-bench`, speed, and KV pool |
 

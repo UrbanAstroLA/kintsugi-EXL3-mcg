@@ -12,19 +12,19 @@ Following Kintsugi Step 5 (`R1–R6`): every line is written with a date before 
 
 ---
 
-## Phase 1 — Determinism, Library Offset & Two-Component Margin Probe Validation (CuteAFD `v6.0.0`, draft — freeze in `protocols/PHASE1.md` before first GPU request)
+## Phase 1 — Determinism, Library Offset & Two-Component Margin Probe Validation (CuteAFD `v6.0.0`, frozen `2026-11-23` in `protocols/PHASE1.md`; **ALL PASS**)
 
-- **L1.1 (Step 0b determinism):** Two separate CuteAFD `v6.0.0` launches of `K3.25-v1` show max per-item margin spread `< 0.05` nat (target `0.0000`) on `D_margin_build` and `0.0` P-B KL difference.
-- **L1.2 (Two-component probe validity):** Each retained component of `D_margin_build` (Component A: answer-token margins; Component B: `</think>` / termination margins on finished `K4` trajectories from items where `K3.25` capped) ranks `K4-bf16core` above `K3.25-rebuilt` with paired bootstrap 95% CI excluding `0`, with at least 5 fragile (`m_i < 1.0` nat) or failing (`m_i < 0`) items on `K3.25-rebuilt`. Any component failing L1.2 is dropped before Phase 2.
-- **L1.3 (Library calibration check):** `|KL_PB(K3.25-rebuilt) − KL_PB(K3.25-v1)| ≤ 0.003` nats. If exceeded, record the library offset and diagnose before Phase 2.
+- **L1.1 (Step 0b determinism) — PASS (`[E1.1]`):** Two separate CuteAFD `v6.0.0` launches of `K3.25-v1` showed exact `0.000000` max per-item margin spread (`24/24` identical `B_close` hashes) on `D_margin_build` and `0.000000` P-B `gen` KL difference.
+- **L1.2 (Two-component probe validity) — PASS on Component B / Component A retired (`[E1.2]`):** Component B (`B_close`, `</think>` token `154842`) ranked `K4-bf16core` above `K3.25-rebuilt` by `+0.2773` nats (`95% CI [+0.0197, +0.5381]`, excluding `0`, `17/24` items higher; `+0.7311` nats / `23/24` higher vs `K3-bf16core`) with `6/24` fragile (`< 1.0` nat) items (`2/24` negative) on `K3.25-rebuilt`. Component A (`A_min`, final JSON values) saturated (`+12.41–12.65` nats, `0/24` fragile, `Δ = −0.0122`, CI includes `0`) and is retired from Phase 2 decision criteria (logged diagnostically only).
+- **L1.3 (Library calibration check) — PASS (`[E1.3]`):** `|KL_PB(K3.25-rebuilt) − KL_PB(K3.25-v1)| = 0.000645` nats (`−0.000645`, `95% CI [−0.002536, +0.001145]`, `4.6×` inside `≤ 0.003`); P-A diff = `+0.000275` nats (`95% CI [−0.002806, +0.003298]`).
 
 ---
 
-## Phase 2 — Layer-Band Damage Map (CuteAFD `v6.0.0`, draft — freeze in `protocols/PHASE2.md` before first GPU request)
+## Phase 2 — Layer-Band Damage Map & Sub-Band Localization (CuteAFD `v6.0.0`, frozen `2026-11-23` in `protocols/PHASE2.md`)
 
-- **L2.1 (Non-flat sensitivity):** Across the 7 six-layer bands (`L03–L44`), the ratio between highest-sensitivity sink band and lowest-sensitivity safe source band is `≥ 2.0×` in either $\Delta m/\text{MiB}$ or $\Delta\text{KL}/\text{MiB}$, and at least one source band produces `0` new negative-margin flips (`hit list = 0`).
-- **L2.2 (Stop rule):** If L2.1 fails (sensitivity is flat across bands within noise), stop the allocation search and publish a negative result.
-- **Stage 2B draft note (`[E0.8]`):** Following Stage 2A, Stage 2B tests whether routing-targeted sub-band upgrades (top-routed remaining K3 experts in top sink bands, plus iso-bitrate cold-to-hot swaps) recover a high fraction of full-band margin gain at lower byte cost (exact ranking rules and thresholds to be frozen in `protocols/PHASE2.md` before Phase 2 GPU runs).
+- **L2.1 (Non-flat sensitivity):** Across the 7 six-layer bands (`B0: L03–08` through `B6: L39–44`), each flipped upward (`+3,888 MiB` → 100% K4) and downward (`−1,296 MiB` → 0% K4) from `K3.25-rebuilt`, the ratio between the highest-sensitivity sink band and the lowest-sensitivity safe source band is `≥ 2.0×` in either `ΔB_close / GiB` (primary task-margin metric, `[E1.2]`) or `|ΔKL_PB| / GiB` (P-B `gen` KL), AND at least one downward-flipped source band produces `0` new negative-margin flips (`B_close < 0` on items where `K3.25-rebuilt ≥ 0`).
+- **L2.2 (Stop rule):** If L2.1 fails (sensitivity is flat across bands within noise or no safe source band exists), stop the allocation search and publish a negative result.
+- **L2.3 (Stage 2B sub-band efficiency — gated on Stage 2A `L2.1` PASS):** On the top 1–2 Stage 2A sink bands, test role splits (`gate_proj` / `up_proj` / `down_proj`) and routing-targeted sub-band upgrades (top-routed remaining K3 experts ranked by `quant_log.csv` `samples` / `route_evidence × loss`, plus an iso-bitrate cold-to-hot swap); advance whichever configuration delivers the strongest `ΔB_close` per GiB without P-B KL regression (`> +0.002` nats) into Phase 3.
 
 ---
 
