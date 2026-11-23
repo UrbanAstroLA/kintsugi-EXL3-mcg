@@ -271,7 +271,29 @@ def main() -> None:
 
     l2_1_safe_source_exists = len(safe_dn) >= 1
     l2_1_spread_ge_2 = any(ge2(x) for x in (up_kl_spread, up_b_spread, sink_vs_src_kl, sink_vs_src_b))
-    l2_1_pass = bool(l2_1_safe_source_exists and l2_1_spread_ge_2)
+    l2_1_orig_pass = bool(l2_1_safe_source_exists and l2_1_spread_ge_2)
+
+    # Tightened Gate P2 (L2.1-v2, pre-data Amendment 2A.1):
+    # 1a: upward P-B KL max/min >= 1.5x with min > 0 and min's paired 95% CI vs k325-rebuilt excluding 0
+    #     (direct paired top-vs-bottom P-B KL cluster-bootstrap CI verified via score_pb.py pair on CPU)
+    # 1b: cross-direction consistency rho_up_down_KL >= 0.60
+    min_up_kl_pos_sig = bool(
+        up_by_kl
+        and up_by_kl[-1]["pb_kl_sens_per_gib"] > 0.0
+        and up_by_kl[-1]["pb_gen_dkl_ci95"][1] < 0.0
+    )
+    l2_1_v2_kl_spread_ge_1_5 = bool(
+        min_up_kl_pos_sig
+        and up_kl_spread is not None
+        and not math.isinf(up_kl_spread)
+        and up_kl_spread >= 1.5
+    )
+    l2_1_v2_rho_ge_0_60 = bool(rho_up_vs_dn_kl is not None and rho_up_vs_dn_kl >= 0.60)
+    l2_1_v2_non_overlapping_top_bot = bool(
+        up_by_kl
+        and up_by_kl[0]["pb_gen_dkl_ci95"][1] < up_by_kl[-1]["pb_gen_dkl_ci95"][0]
+    )
+    l2_1_v2_pass_prelim = bool(l2_1_v2_kl_spread_ge_1_5 and l2_1_v2_rho_ge_0_60)
 
     def fmt_r(x: Optional[float]):
         if x is None:
@@ -298,7 +320,12 @@ def main() -> None:
             "spearman_up_vs_down_pb_kl": round(rho_up_vs_dn_kl, 4) if rho_up_vs_dn_kl is not None else None,
         },
         "gates": {
-            "L2_1_pass": l2_1_pass,
+            "L2_1_v2_active_pass_prelim": l2_1_v2_pass_prelim,
+            "L2_1_v2_kl_spread_ge_1_5": l2_1_v2_kl_spread_ge_1_5,
+            "L2_1_v2_min_up_kl_pos_sig": min_up_kl_pos_sig,
+            "L2_1_v2_non_overlapping_top_bot_ci": l2_1_v2_non_overlapping_top_bot,
+            "L2_1_v2_rho_up_down_kl_ge_0_60": l2_1_v2_rho_ge_0_60,
+            "L2_1_orig_archived_pass": l2_1_orig_pass,
             "L2_1_safe_source_exists": l2_1_safe_source_exists,
             "L2_1_upward_b_close_spread": fmt_r(up_b_spread),
             "L2_1_upward_pb_kl_spread": fmt_r(up_kl_spread),

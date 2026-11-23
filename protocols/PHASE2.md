@@ -31,17 +31,28 @@ Partition MoE layers `L03–L44` into **7 symmetric six-layer bands** (`5,184` r
 5. Stop CuteAFD and immediately delete the temporary stitched flip directory before starting the next flip.
 
 ### Stage 2A Analysis & Pre-Registered Gate P2 (`L2.1`, `L2.2`)
-Computed by `tools/analyze_phase2.py` against matched control `k325-rebuilt-r0`:
+
+> **Pre-data Amendment 2A.1 (`2026-11-23`, recorded prior to any Stage 2A flip completing):**  
+> Post-Phase-1 power analysis showed that the original `L2.1` phrasing (below, preserved verbatim) cannot meaningfully fail under a flat null: equal-bitrate weight swaps (`k325-rebuilt − k325-native`) exhibit a per-item `B_close` SD of `0.784` nat against an expected single-band upward lift of `~+0.04` nat (`1/7` of `+0.277`), so the smallest of 7 noisy `ΔB_close` means routinely falls near zero or negative (`P(max/min ≥ 2×) = 97%–100%` under a flat null), and only 4 items sit in `[0, 1)` on `k325-rebuilt` (`P(≥1 downward band has 0 new negatives) = 93%–100%`). Because the original `L2.1` OR'd `B_close` with P-B KL, the stop rule `L2.2` had no statistical teeth.  
+> **Active tightened gate (`L2.1-v2`, strictly stricter than original `L2.1`, evaluated on the identical 14-flip Stage 2A dataset):**
+> 1. **Primary band-ranking & non-flatness gate on P-B `gen` KL (`15,104` rows, `53` clusters):**
+>    - **(a) Significant depth spread:** The direct paired cluster-bootstrap contrast between the highest-recovery upward band and lowest-recovery upward band (`KL_PB(top_sink) − KL_PB(bottom_band)`) has a **95% CI excluding `0`**, **AND** the upward `max / min` sensitivity ratio on `−ΔKL_PB / GiB` is **`≥ 1.5×`** (with `min > 0` and its paired 95% CI vs `k325-rebuilt` excluding `0`).
+>    - **(b) Cross-direction structural consistency:** Spearman rank correlation between upward (`→ 100% K4`) and downward (`→ 0% K4`) P-B `gen` KL sensitivity across `B0..B6` satisfies **`ρ_up_down_KL ≥ 0.60`** (confirming a real depth profile rather than flip jitter).
+> 2. **Confirmatory `B_close` evaluation (no degenerate `max/min` ratio near zero):**
+>    - Report per-band `ΔB_close`, 95% CI, share of `K4 − K3.25-rebuilt` headroom recovered (`+0.2773` nat), Spearman `ρ(B_close, −KL_PB)`, and `ρ_up_down_B`.
+>    - **Mandatory null calibration before Stage 2B/Phase 3:** If `(1a)` and `(1b)` pass, run **2 within-band iso-bitrate shuffle controls** (`~32 min` total — randomly reassigning which `1,296 / 5,184` projections are K4 inside two bands at exact `0 B` delta) to directly measure single-band zero-bitrate `B_close` and `KL_PB` jitter, plus a **neutral-author `B_close` check** on non-K4 finished trajectories before locking Phase 3.
+> 3. **Stop rule (`L2.2`):** If `(1a)` or `(1b)` fails, stop before Stage 2B/Phase 3 and publish a clean negative result.
+
+Computed by `tools/analyze_phase2.py` against matched control `k325-rebuilt-r0` (reporting both original `L2.1` for record transparency and active `L2.1-v2` as the governing gate):
 - For each upward flip (`+3.7969 GiB`):
   - `ΔB_close = mean(B_close(flip) − B_close(k325-rebuilt))` with paired bootstrap 95% CI (`10,000` resamples, seed `20261123`), `ΔB_close / GiB`, fragile (`< 1.0`) and negative (`< 0`) counts, and fraction of total `K4 − K3.25-rebuilt` headroom (`+0.2773` nat) recovered.
   - `ΔKL_PB = KL_PB_gen(flip) − KL_PB_gen(k325-rebuilt)` with paired cluster-bootstrap 95% CI, `−ΔKL_PB / GiB`, and fraction of total `K4 − K3.25-rebuilt` KL headroom (`0.013074` nat) recovered.
 - For each downward flip (`−1.2656 GiB`):
-  - `ΔB_close`, damage rate `−ΔB_close / GiB`, **hit-list count** (number of items flipping from `B_close ≥ 0` on `k325-rebuilt` to `B_close < 0` on the downward flip, plus new fragile `< 1.0` flips), and `ΔKL_PB / GiB`.
-- Cross-band alignment: Spearman rank correlation $\rho$ (with bootstrap 95% CI) between upward `ΔB_close / GiB` and `−ΔKL_PB / GiB` across `B0..B6`, and between upward and downward sensitivity across `B0..B6`.
-- **L2.1 (Non-flat sensitivity — PASS condition):**
-  - The sensitivity ratio `max(sink) / min(safe source)` across `B0..B6` is **`≥ 2.0×`** in either `ΔB_close / GiB` or `|ΔKL_PB| / GiB` (computing both upward-only max/min and best upward sink vs cheapest safe downward source), **AND**
-  - At least one downward-flipped source band has **hit list = `0`** (`0` new `B_close < 0` flips).
-- **L2.2 (Stop rule):** If `L2.1` fails, stop before Stage 2B/Phase 3 and publish a clean negative result.
+  - `ΔB_close`, damage rate `−ΔB_close / GiB`, hit-list count (new `B_close < 0` and new `< 1.0` flips), and `ΔKL_PB / GiB`.
+- Cross-band alignment: Spearman rank correlation $\rho$ between upward `ΔB_close / GiB` and `−ΔKL_PB / GiB` across `B0..B6`, and between upward and downward sensitivity across `B0..B6`.
+- **Original `L2.1` (archived verbatim; superseded by `L2.1-v2` above):**
+  - The sensitivity ratio `max(sink) / min(safe source)` across `B0..B6` is `≥ 2.0×` in either `ΔB_close / GiB` or `|ΔKL_PB| / GiB`, AND at least one downward-flipped source band has hit list = `0`.
+- **L2.2 (Stop rule):** If `L2.1-v2` fails, stop before Stage 2B/Phase 3 and publish a clean negative result.
 
 ---
 
