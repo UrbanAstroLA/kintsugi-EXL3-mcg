@@ -4,7 +4,7 @@ Zero-GPU inspection performed `2026-11-23` against local checkpoint snapshots an
 
 ---
 
-## 1. `K3.25-v1` Existing Bit Allocation (`[E0.1]`)
+## 1. `K3.25-v1` Existing Bit Allocation (`[E0.1]`, `[E0.8]`)
 
 Inspected `wrldsuksgo2mars/GLM-5.3-Flash-EXL3-K3.25-v1` (`rev 0490d2f7`, `quantize_config.json` and safetensors headers):
 
@@ -16,6 +16,14 @@ Inspected `wrldsuksgo2mars/GLM-5.3-Flash-EXL3-K3.25-v1` (`rev 0490d2f7`, `quanti
   - Even/odd alternating layers: `gate = 40` or `41`, `up = 67` or `68`, `down = 108`.
   - Layer `L45` (MTP): `0` K4 projections (`0%`).
 - **Selection rule recorded in metadata:** `base-tier-hessian-weighted-relative-error-times-natural-gate-squared-mass-v1` on `agentic-quant-panel-v1` (1,426 prompts, 1.08M tokens). No inter-layer reallocation was performed.
+
+### Within-Layer Routing Skew & Remaining Hot K3 Experts (`[E0.8]`)
+
+Auditing `K3.25-v1/quant_log.csv` alongside `K3.25-v1/quantize_config.json` across `111` `(layer, role)` groups in `L03–L44` reveals pronounced within-layer routing concentration across the `288` routed experts:
+
+- **Routing skew:** Calibration routing frequency (`samples`) has a **`67.24×` median** (`236.15×` max) max/min skew within each `(layer, role)` group.
+- **Residual top-routed K3 experts:** Although `K3.25-v1` already skews its K4 picks toward hotter experts (`47,531` vs `24,180` mean samples, `1.97×`), **`3,002 / 7,776` (`38.6%`) of the top-25% most frequently routed experts per `(layer, role)` remain at K3**, constrained by fixed per-layer `25.0%` quotas and fixed `3:5:8` role caps.
+- **Per-projection metadata coverage:** Together, `K3.25-v1/quant_log.csv` and `K3-v1/ds4rt-exl3-error-ledger.jsonl` provide `sample_count`, `route_evidence`, and `quantizer_metrics` for all `37,152` routed expert projections, enabling routing-targeted sub-band localization in Phase 2B without an additional calibration pass.
 
 ---
 

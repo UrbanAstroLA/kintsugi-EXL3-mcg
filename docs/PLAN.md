@@ -49,14 +49,19 @@ Prior CuteAFD `v5.0.0` receipts (`2026-11-15-fp8-core-contrasts`) showed that ~4
 3. Record P-A KL, P-B KL, and both `D_margin_build` components on all four.
 - **Gate P1 (`L1.1–L1.3`):** Restart margin spread `< 0.05` nat (`0.0` target) and P-B diff `0.0`; each retained probe component separates `K4-bf16core` above `K3.25-rebuilt` (95% CI excluding `0`) with fragile/negative items on `K3.25-rebuilt`; `|KL_PB(K3.25-rebuilt) − KL_PB(K3.25-v1)| ≤ 0.003` nats (else diagnose calibration offset first).
 
-### Phase 2 — Coarse Damage Map: Layer-Band & Targeted Role Localization (`~3.5–5.0 GPU-h`, **Wall ETA: ~3.5–5 h**)
+### Phase 2 — Coarse Damage Map: Layer-Band, Role & Routing Localization (`~3.5–5.5 GPU-h`, **Wall ETA: ~3.5–5.5 h**)
 1. **Stage 2A — 7 Layer-Band Scan (14 flips, `~3.5 GPU-h` at `~15 min/flip`: `0.5 min` stitch + `2 min` launch + `12 min` probe/KL):**
    - Partition `L03–L44` into **7 six-layer bands** (`B0: L03–08`, `B1: L09–14`, `B2: L15–20`, `B3: L21–26`, `B4: L27–32`, `B5: L33–38`, `B6: L39–44`), plus optional `L45` (MTP) check.
    - Starting from `K3.25-rebuilt` (25% K4 per band):
      - **7 upward flips (band → 100% K4, `+3.80 GiB` each):** measure sink recovery ($\Delta m_A/\text{MiB}$, $\Delta m_B/\text{MiB}$, $\Delta\text{KL}/\text{MiB}$).
      - **7 downward flips (band → 0% K4, `−1.27 GiB` each):** identify safe source bands (`0` new negative-margin flips).
    - Report rank correlation $\rho$ (with bootstrap CI) between $\Delta\text{KL}/\text{MiB}$ and $\Delta m/\text{MiB}$ across bands.
-2. **Stage 2B — Targeted Role Split (optional, `~1.0–1.5 GPU-h`):** On the top 2 sink bands, test `gate_proj` / `up_proj` / `down_proj` separately.
+2. **Stage 2B — Targeted Role Split & Routing-Targeted Sub-Band Localization (optional, `~1.0–2.0 GPU-h`):**
+   - **Targeted Role Split:** On the top 2 sink bands, test `gate_proj` / `up_proj` / `down_proj` separately.
+   - **Routing-Targeted Sub-Band Localization (`~0.5–1.5 GPU-h`, `[E0.8]`):** Once Stage 2A locates the top 1–2 task-damage bands, exploit the `67.24×` median within-layer routing skew (and the `38.6%` of top-25% routed experts still at K3) by testing:
+     1. Upgrading **only the top-routed remaining K3 experts** inside those bands (ranked by calibration `sample_count` / `route_evidence × loss` from `quant_log.csv` and `K3-v1/ds4rt-exl3-error-ledger.jsonl`, costing `~+1.0–2.0 GiB` vs `+3.8–7.6 GiB` full-band).
+     2. An **iso-bitrate cold-to-hot swap**, moving K4 off cold experts in safe source bands onto hot K3 experts in top-damage bands at matched bytes.
+     3. If calibration routing misses task-specific 127K routing, an optional diagnostic capture of task-specific `expert_counts` on `D_margin_build` can follow.
 - **Gate P2 (`L2.1–L2.2`):** `≥ 2.0×` sensitivity spread between best sink and cheapest safe source band in $\Delta m/\text{MiB}$ or $\Delta\text{KL}/\text{MiB}$. If flat across bands within noise, stop early and publish a clean negative result.
 
 ### Phase 3 — Targeted Repair & Held-Out Confirmation on CuteAFD `v6.0.0` (`~7–11 GPU-h`, **Wall ETA: ~7–12 h**)
@@ -80,13 +85,23 @@ Prior CuteAFD `v5.0.0` receipts (`2026-11-15-fp8-core-contrasts`) showed that ~4
 
 ---
 
+## Methodology Extensions for Large Reasoning MoEs
+
+Within the core Kintsugi search-and-confirmation loop, this study tests three scope-bound extensions for large reasoning MoE checkpoints:
+
+1. **Termination-boundary (`</think>`) margins alongside answer-token margins:** On long-context reasoning models, quantization degradation often presents as runaway thinking (`max_tokens` cap hits) rather than wrong answer tokens alone. Pairing closing-`</think>` / pre-divergence margins (Component B) with answer-token margins (Component A) captures both failure modes directly.
+2. **Two-level MoE localization (coarse depth bands → within-layer routing-hot experts):** Stage 2A localizes task damage across 7 six-layer depth bands; Stage 2B refines within the top sink bands using within-layer routing skew (`[E0.8]`, `sample_count` / `route_evidence × loss`) to test whether upgrading or swapping only hot K3 experts recovers most of the full-band margin gain at lower byte cost.
+3. **Matched stitched-library controls (`K3.25-rebuilt`):** When reusing independently quantized EXL3 checkpoints (`K3-v1`, `K4-Core-K6`, `K3.25-v1`; `[E0.2]`), pairing every stitched candidate against a byte-matched control built from the same K3/K4 tensor pools separates quantization-run library offset from pure bit-allocation effects.
+
+---
+
 ## Resource & ETA Summary
 
 | Phase | Engine | GPU-h | Wall ETA | Disk Scratch | Hard Kill Gate |
 |---|---|---:|---:|---:|---|
 | Phase 0 (Stitcher + planner) | CPU / CuteAFD planner | `0 h` | **Done (`~6 min`)** | `172 GiB` | Gate P0 (**PASS**) |
 | Phase 1 (Determinism + two-component probe) | CuteAFD `v6.0.0` | `~1.5–1.8 h` | `~2 h` | `~170 GiB` | Gate P1 |
-| Phase 2 (7-band damage map + optional roles) | CuteAFD `v6.0.0` | `~3.5–5.0 h` | `~3.5–5 h` | `~170 GiB` rolling | Gate P2 |
+| Phase 2 (7-band damage map + role/routing split) | CuteAFD `v6.0.0` | `~3.5–5.5 h` | `~3.5–5.5 h` | `~170 GiB` rolling | Gate P2 |
 | Phase 3 (Repair + CuteAFD confirmation) | CuteAFD `v6.0.0` | `~7–11 h` | `~7–12 h` | `~180 GiB` rolling | Gate P3 |
 | Phase 4 (vLLM `v0.9.2` carry-over) | vLLM fork `v0.9.2` | `~6.5–8 h` | `~6.5–8 h` | `~200 GiB` temp dumps | Gate P4 |
-| **Total (if all gates pass)** | | **~18.5–26 h** | **~19–27 h** | **≤ 200 GiB rolling** | Early stop at P1 / P2 / P3 |
+| **Total (if all gates pass)** | | **~18.5–26.5 h** | **~19–27.5 h** | **≤ 200 GiB rolling** | Early stop at P1 / P2 / P3 |

@@ -24,6 +24,7 @@ Following Kintsugi Step 5 (`R1–R6`): every line is written with a date before 
 
 - **L2.1 (Non-flat sensitivity):** Across the 7 six-layer bands (`L03–L44`), the ratio between highest-sensitivity sink band and lowest-sensitivity safe source band is `≥ 2.0×` in either $\Delta m/\text{MiB}$ or $\Delta\text{KL}/\text{MiB}$, and at least one source band produces `0` new negative-margin flips (`hit list = 0`).
 - **L2.2 (Stop rule):** If L2.1 fails (sensitivity is flat across bands within noise), stop the allocation search and publish a negative result.
+- **Stage 2B draft note (`[E0.8]`):** Following Stage 2A, Stage 2B tests whether routing-targeted sub-band upgrades (top-routed remaining K3 experts in top sink bands, plus iso-bitrate cold-to-hot swaps) recover a high fraction of full-band margin gain at lower byte cost (exact ranking rules and thresholds to be frozen in `protocols/PHASE2.md` before Phase 2 GPU runs).
 
 ---
 
