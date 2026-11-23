@@ -1,12 +1,12 @@
-# Reference Baselines (from `cuteafd-eval` and `local-inference-evals`)
+# Reference Baselines (from Published `cuteafd-eval` and `local-inference-evals`)
 
-All numbers below are copied from published receipts on the same two-GPU workstation (2× RTX PRO 6000 Blackwell Max-Q, 300 W) and remain scoped to the engine version on which they were measured.
+All numbers below trace to published receipts on the same two-GPU workstation (2× RTX PRO 6000 Blackwell Max-Q, 300 W) and remain scoped strictly to the engine version on which they were measured.
 
 ---
 
 ## 1. Target Baseline: `K3.25-v1` on tpurtell vLLM Fork `v0.9.2`
 
-- **Checkpoint:** `wrldsuksgo2mars/GLM-5.3-Flash-EXL3-K3.25-v1` rev `0490d2f7` (137 GiB; BF16 dense core + 37,152 MCG EXL3 routed experts: 28,080 K3 + 9,072 K4).
+- **Checkpoint:** `wrldsuksgo2mars/GLM-5.3-Flash-EXL3-K3.25-v1` rev `0490d2f7` (137 GiB; unquantized BF16/F32 dense core + 37,152 MCG EXL3 routed experts: 28,080 K3 + 9,072 K4).
 - **Engine:** `ghcr.io/tpurtell/glm-5.3-flash-exl3-4bpw-2x-rtx@sha256:ea0430aa` (`v0.9.2`, `TP=2`, `EP=1`, `KV_CACHE_DTYPE=fp8_ds_mla`, `DFlash2` K3, `util=0.95`, thinking on).
 
 | Metric | `K3.25-v1` (vLLM `v0.9.2`) | Comparator (`K4` on vLLM `v0.9.2`) | Source |
@@ -23,28 +23,24 @@ All numbers below are copied from published receipts on the same two-GPU worksta
 
 ---
 
-## 2. K3.25 vs K4 Precision Isolation (CuteAFD `v5.0.0`, `cuteafd-eval`)
+## 2. K3.25 vs K4 Precision Isolation (Published CuteAFD `v5.0.0`, `cuteafd-eval`)
 
-These runs used the exact same K3.25 routed expert bytes (`K3.25-Core-FP8` and the `K3.25-Core-K6-HQA` graft) on CuteAFD `v5.0.0` (not measured on `v6.0.0` yet):
+These published runs measured the exact same K3.25 routed expert bytes on CuteAFD `v5.0.0` (either in `K3.25-Core-FP8` or grafted onto the K6/`fp8-compact` core in `k325-fp8c`; native `K3.25-v1` with its BF16/F32 core has not run the 60-item task set on CuteAFD):
 
-| Configuration (CuteAFD `v5.0.0`) | P-B KL | P-A KL | 4K Tasks | 127K Tasks (4 passes) | 127K Unfinished (/240) | Source |
-|---|---:|---:|---:|---:|---:|---|
-| `k325-fp8` (`K3.25` experts + FP8 core) | `0.0485` | `0.0476` | `0.9849` | `0.8667` | `16` | `2026-11-10-context-probe`, `2026-11-15-fp8-core-contrasts` |
-| `k325-hqa` (`K3.25` experts + HQA core graft) | `0.0462` | `0.0472` | — | — | — | `2026-11-15-fp8-core-contrasts` (`FC-k325-graft-kl`) |
-| `k325-fp8c` (`K3.25` experts + `fp8-compact` graft) | `0.0495` | `0.0486` | — | `0.8703` | `16` | `2026-11-15-fp8-core-contrasts` (`FC-k325-fp8c-vs-fp8c-tasks`) |
-| `fp8c` (`K4` experts + `fp8-compact` core) | `0.0327` | `0.0326` | `0.9807` | `0.9276` | `4` | `2026-11-15-fp8-core-contrasts` |
-| `hqa` (`K4` experts + HQA core) | `0.0302` | `0.0315` | `0.9844` | `0.9245` | `5` | `2026-11-10-context-probe` |
+| Configuration (CuteAFD `v5.0.0`) | P-B KL | P-A KL | 4K Tasks | 127K ITT (4 passes) | 127K Fin-Only | 127K Unfinished (/240) | Source |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `k325-fp8` (`K3.25` experts + FP8 core) | `0.0485` | `0.0476` | `0.9849` | `0.8667` | — | `16` | `2026-11-10-context-probe`, `2026-11-15-fp8-core-contrasts` |
+| `k325-hqa` (`K3.25` experts + HQA core graft) | `0.0462` | `0.0472` | — | — | — | — | `2026-11-15-fp8-core-contrasts` (`FC-k325-graft-kl`) |
+| `k325-fp8c` (`K3.25` experts + `fp8-compact` graft) | `0.0495` | `0.0486` | — | `0.8703` | `0.9325` | `16` (`14` cap, `2` rep) | `2026-11-15-fp8-core-contrasts` (`FC-k325-fp8c-vs-fp8c-tasks`) |
+| `fp8c` (`K4` experts + `fp8-compact` core) | `0.0327` | `0.0326` | `0.9807` | `0.9276` | `0.9433` | `4` (`4` cap, `0` rep) | `2026-11-15-fp8-core-contrasts` |
+| `hqa` (`K4` experts + HQA core) | `0.0302` | `0.0315` | `0.9844` | `0.9245` | — | `5` | `2026-11-10-context-probe` |
 
 **Key paired contrasts (CuteAFD `v5.0.0`):**
-- Pure expert step (`k325-fp8c − fp8c`, matched core): **`+0.0168 [+0.0134, +0.0202]`** P-B KL; **`−0.0573 [−0.0979, −0.0198]`** at 127K tasks (`16` vs `4` unfinished).
+- Pure expert step (`k325-fp8c − fp8c`, matched `fp8-compact` core): **`+0.0168 [+0.0134, +0.0202]`** P-B KL; **`−0.0573 [−0.0979, −0.0198]`** at 127K ITT (`16` vs `4` unfinished — roughly `4.7 pp` of the `5.73 pp` gap comes from non-completion, mostly 32,768-token cap hits).
 - Pure core step on K3.25 (`k325-fp8c − k325-fp8`): **`+0.0036 [−0.0365, +0.0448]`** at 127K (not detected; identical `16` unfinished replies).
 
 ---
 
-## 3. CuteAFD `v6.0.0` Context Baselines (Preliminary, `cuteafd-eval`)
+## 3. CuteAFD `v6.0.0` Baselines
 
-From `2026-11-19-v6-bridge` and `2026-11-20-v6-context` on CuteAFD `v6.0.0`:
-- `v6-bf16core` (`K4` experts + true BF16 core): P-B KL `0.0314`, P-A KL `0.0304`, 4K `0.987`, 127K `0.916` (`5` cap / `1` rep unfinished).
-- `v6-hqa` (`K4` experts + HQA core overlay): P-B KL `0.0311`, 4K `0.986`, 127K `0.919` (`4` cap / `1` rep unfinished).
-- P-B repeat floor on CuteAFD `v6.0.0`: exact bit-equality (`32,768` rows, `0.0` KL diff; `V6B-gates`).
-- `K3.25-v1` has **not yet been measured on CuteAFD `v6.0.0`**; Phase 1 establishes its exact `v6.0.0` baseline.
+No `K3.25` checkpoint has been measured on CuteAFD `v6.0.0` in published `cuteafd-eval` runs yet. Phase 1 establishes the `CuteAFD v6.0.0` baselines directly for `K3.25-v1`, `K3.25-rebuilt`, `K4-bf16core`, and `K3-bf16core`.

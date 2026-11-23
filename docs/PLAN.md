@@ -1,97 +1,92 @@
 # Experimental Plan: Kintsugi Bit Allocation for GLM-5.3-Flash EXL3-MCG K3.25
 
 **Hardware:** 2× NVIDIA RTX PRO 6000 Blackwell Max-Q (96 GB each, 300 W).  
-**Primary search engine:** CuteAFD `v6.0.0` (`tag 15148d339`, release image pinned by digest).  
+**Primary search engine:** CuteAFD `v6.0.0` (`tag 15148d339`, `sha256:f2bd29c7...`; note `v6.0.1` only alters media time in `prefill_share` on GLM, with no text-only effect — we keep `v6.0.0` pinned for consistency).  
 **Cross-engine confirmation target:** tpurtell's vLLM fork `v0.9.2` (`sha256:ea0430aa`, `TP=2`, `EP=1`, `DFlash2`).  
-**Target checkpoint family:** `wrldsuksgo2mars/GLM-5.3-Flash-EXL3-K3.25-v1` (BF16 dense core + 37,152 MCG EXL3 routed experts).
+**Target checkpoint family:** `wrldsuksgo2mars/GLM-5.3-Flash-EXL3-K3.25-v1` (unquantized BF16/F32 dense core + 37,152 MCG EXL3 routed experts).
 
 ---
 
 ## Why CuteAFD v6.0.0 for Search, Followed by vLLM v0.9.2 Carry-Over
 
-1. **Bitwise prefill determinism (Kintsugi Step 0b):** CuteAFD v5.0.0 and v6.0.0 demonstrated exact `0.0` KL difference and `1.0` argmax agreement across restarts (`32,768` fidelity rows bit-equal in `cuteafd-eval` `V6B-gates`; `0.0` KL floor on multi-turn frontiers in `DC-turn-floor`). vLLM v0.9.2 has `±0.0006` nat chunked-prefill jitter above `2,045` tokens.
-2. **Fast launch turnaround (~6× faster):** CuteAFD starts in ~1 min vs vLLM v0.9.2's ~6.4 min warm restart (`382 s`), making a 14–21 group damage-map scan practical in **~2–3.5 GPU-hours** instead of ~6+ GPU-hours.
-3. **Matched dense-core precision:** Unlike CuteAFD v5.0.0 (which converted BF16 MLA/FFN weights to FP8 block-128 at load; `cuteafd-eval` `c45`), CuteAFD v6.0.0 keeps plain BF16 core tensors in BF16 (`V6S-bf16-precision`), matching vLLM v0.9.2's BF16 core execution on `K3.25-v1`.
-4. **Native probe and scoring APIs:** `/v1/bench/probe` exposes exact teacher-forced log-probabilities and margins at arbitrary depths (up to 128K+), alongside `cuteafd bench fidelity run` (P-B) and `glmf-teacher-kl.py` (P-A).
+1. **Bitwise prefill determinism (Kintsugi Step 0b):** CuteAFD `v5.0.0` demonstrated exact `0.0` KL difference and `1.0` argmax agreement across restarts (`FC-pb-repeat`, `DC-turn-floor`), whereas vLLM `v0.9.2` has `±0.0006` nat chunked-prefill jitter above `2,045` tokens. Phase 1 verifies `v6.0.0`'s determinism directly on `K3.25-v1`.
+2. **Faster launch turnaround (~3× faster):** CuteAFD `v6.0.0` starts in `~2 min` vs vLLM `v0.9.2`'s `~6.4 min` warm restart (`382 s`), making a 14-flip layer-band scan practical in `~3.5 GPU-h`.
+3. **Matched dense-core precision:** Unlike CuteAFD `v5.0.0` (which converted BF16 MLA/FFN weights to FP8 block-128 at load; `cuteafd-eval` `c45`), CuteAFD `v6.0.0` keeps plain BF16/F32 core tensors unquantized (`CheckpointPrecision`, `fp8-prefill: Unchanged`; `[E0.7]`), matching vLLM `v0.9.2`'s BF16/F32 core execution on `K3.25-v1`.
+4. **Native inline margin probe:** CuteAFD `v6.0.0`'s `/v1/bench/probe` (`rust/crates/cuteafd-api/src/openai/probe.rs:302–308, :567–569`) returns `ProbeRow { position, hash, argmax, top, wanted, finite }` inline in JSON when `top_k >= 2` and `wanted` (`y_t`) are specified on `score_positions`, giving exact teacher-forced margins $m_t = \log p(y_t) - \max_{y \neq y_t}\log p(y)$ with **zero logit dumps**.
+5. **Loop-abort boundary:** CuteAFD's `RepeatGuard` rule R caps its shingle map at `MAX_ENTRIES = 65,536` tokens. All graded task evaluations pin `max_tokens = 32,768` so this bound cannot activate.
 
 ---
 
 ## Controlling the Fit-Library Confound
 
-Phase 0 tensor hashing (`[E0.2]`) showed that `K3-v1`, `K3.25-v1`, and `K4-Core-K6` were quantized independently (distinct trellis hashes despite identical EXL3 MCG shapes, dtypes, and `mcg_multiplier = 3417055213`). Therefore:
+Phase 0 tensor hashing (`[E0.2]`) showed that `K3-v1`, `K3.25-v1`, and `K4-Core-K6` came from separate quantization runs (distinct `.trellis` hashes despite identical MCG shapes, dtypes, and `mcg_multiplier = 3417055213`). Therefore:
 
-- Every allocation experiment drawn from the `K3-v1` (K3 pool) + `K4-Core-K6` (K4 pool) + `K3.25-v1` (BF16 core) library **must include a matched stitched control (`K3.25-rebuilt`)** using `K3.25-v1`'s exact `9,072`-projection K4 map.
+- Every stitched allocation drawn from `K3-v1` (K3 pool) + `K4-Core-K6` (K4 pool) + `K3.25-v1` (BF16/F32 core) is paired against a **matched stitched control (`K3.25-rebuilt`)** using `K3.25-v1`'s exact `9,072`-projection map.
 - This cleanly separates:
-  1. **Library / calibration difference:** `K3.25-rebuilt − K3.25-v1` (native published checkpoint).
-  2. **Pure Kintsugi allocation effect:** `K3.25-Kintsugi − K3.25-rebuilt` (identical K3/K4 tensor pools, differing *only* in which projections receive K4).
-  3. **Ship bar:** Any candidate must beat *both* `K3.25-rebuilt` and native `K3.25-v1` on held-out confirmation.
+  1. **Library offset:** `K3.25-rebuilt − K3.25-v1` (native published checkpoint).
+  2. **Pure allocation effect:** `candidate − K3.25-rebuilt` (identical K3/K4 tensor pools).
+  3. **Repair target:** Improving upon `K3.25-v1` toward `K4-bf16core` at explicitly measured byte cost.
 
 ---
 
-## Staged Phases & Go/No-Go Gates
+## Staged Phases, Go/No-Go Gates & ETAs
 
-### Phase 0 — CPU Stitcher, Control Verification & Planner Check (~1 h CPU, 0 GPU-h)
-1. Verify all `37,152` expert projections (`L03–L45`, 288 experts × `{gate_proj, up_proj, down_proj}`) across `K3-v1`, `K3.25-v1`, and `K4-Core-K6` share identical shapes, dtypes, and `mcg_multiplier`.
-2. Build `tools/stitch_exl3.py`: given any per-projection `{3, 4}` map (obeying the two-consecutive-tier rule per layer), writes a self-contained Hugging Face safetensors checkpoint directory (`quantize_config.json`, `quantization_config.json`, `config.json`, `model.safetensors.index.json`, hardlinked/copied shards).
-3. **Writer check (Kintsugi Step 1):** Rebuilding `K3.25-v1` from `K3.25-v1` itself must be byte-exact per tensor; building `K3.25-rebuilt` from `K3-v1` + `K4-Core-K6` + `K3.25-v1` BF16 core must pass both CuteAFD v6.0.0's CPU planner (`READY to serve`, BF16 core) and vLLM v0.9.2's `quantization_config.json` loader contract (`exl3_contract` / `port-exl3-projection-mixed-glm53`).
-- **Gate P0 (see [`evidence/LINES.md`](../evidence/LINES.md)):** Planner returns `READY to serve` on `K3.25-v1`, `K3.25-rebuilt`, a 100%-K4 band variant, and a 0%-K4 band variant; `K3.25-rebuilt` matches `K3.25-v1`'s byte budget within `0.1%`.
+### Phase 0 — CPU Stitcher, Control Verification & Planner Check (**COMPLETE**, `0 GPU-h`, `~6 min` wall)
+- Built [`tools/stitch_exl3.py`](../tools/stitch_exl3.py) (1 BF16/F32 core shard + 43 per-layer MoE shards with incremental hardlink reuse).
+- Verified `L0.1` (`k325-selfcheck`, `0` header/SHA mismatches), `L0.2` (`k325-rebuilt`, exact `146,178,965,496 B` tensor total; incremental band flips `test-b0-k4` in `35.9 s` and `test-b0-k3` in `26.9 s`), and `L0.3` (CuteAFD `v6.0.0` CPU planner returned `READY to serve` on all 4 checkpoints; `[E0.5]–[E0.7]`).
 
-### Phase 1 — Step 0b Determinism, Library Calibration Check & Margin Probe Validation (~1.5 GPU-h on CuteAFD v6.0.0)
-1. **Construct the build-side teacher-forced margin probe (`D_margin_build`):**
-   - Select ~30–40 hard items (distinct from the held-out confirmation split!) drawing from long-context retrieval/aggregation prefixes (`64K–127K`, where K3.25 degrades vs K4) and multi-step tool/code prefixes, scoring exact teacher-forced answer-token margin $m_i = \min_{t \in i}(\log p(y_t) - \max_{y \neq y_t}\log p(y))$ via `/v1/bench/probe`.
-   - Split explicitly into **build set** (used to rank groups in Phase 2) and **held-out set** (untouched until Phase 3 confirmation).
-2. **Baseline launches on CuteAFD v6.0.0:**
-   - `K3.25-v1` (2 separate restarts for Step 0b determinism check)
-   - `K3.25-rebuilt` (measures library offset vs native `K3.25-v1`)
-   - `K4-bf16core` (all 37,152 experts from `K4-Core-K6` + BF16 core from `K3.25-v1` — the upper-bound reference for our library!)
-   - `K3-bf16core` (all 37,152 experts from `K3-v1` + BF16 core — the lower-bound reference)
-3. Record P-A KL, P-B KL, and `D_margin_build` margins on all four.
-- **Gate P1 (Go/No-Go):**
-  - Determinism: restart-to-restart margin spread `< 0.05` nat (target `0.0000`) and P-B KL diff `0.0`.
-  - Probe validity (Kintsugi Step 2 rule): `D_margin_build` separates `K4-bf16core` above `K3.25-rebuilt` with paired bootstrap 95% CI excluding 0, and contains fragile/negative-margin items on `K3.25-rebuilt`.
-  - Library check: `K3.25-rebuilt` sits within `±0.003` nats P-B KL of native `K3.25-v1` (if not, diagnose calibration differences before spending Phase 2 GPU time).
+### Phase 1 — Step 0b Determinism, Library Offset & Two-Component Margin Probe Validation (`~1.5–1.8 GPU-h`, **Wall ETA: ~2 h**)
+Prior CuteAFD `v5.0.0` receipts (`2026-11-15-fp8-core-contrasts`) showed that ~4.7 of `k325-fp8c`'s 5.73-pp deficit at 127K came from **unfinished replies (`14` cap hits + `2` loop aborts vs `4` cap hits on `fp8c`)**, while finished-only scores differed by only `1.08 pp` (`0.9325` vs `0.9433`). A pure final-answer margin probe alone may miss termination failures.
 
-### Phase 2 — Coarse Damage Map: Layer-Band & Targeted Role Localization (~2.5–4 GPU-h on CuteAFD v6.0.0)
-1. **Stage 2A — 7 Layer-Band Scan (14 flips, ~2–2.5 GPU-h):**
-   - Partition MoE layers `L03–L44` into **7 contiguous 6-layer bands** (`B0: L03–08`, `B1: L09–14`, `B2: L15–20`, `B3: L21–26`, `B4: L27–32`, `B5: L33–38`, `B6: L39–44`), plus optional `L45` (MTP) check.
+1. **Construct a two-component build-side teacher-forced probe (`D_margin_build`)** using `/v1/bench/probe` (`top_k=5`, `wanted=y_t`, zero dumps), strictly split from held-out confirmation items (`D_margin_heldout`):
+   - **Component A (Answer margins):** Hard 64K–127K `join`/`ledger`/`trace` answer tokens plus tool-call decision tokens.
+   - **Component B (Termination / `</think>` margins):** Closing `</think>` and pre-divergence reasoning tokens along finished `K4` trajectories on the exact items where `K3.25` exhausted the 32,768-token cap.
+2. **Baseline launches on CuteAFD `v6.0.0`:**
+   - `K3.25-v1` (2 separate launches for Step 0b determinism)
+   - `K3.25-rebuilt` (measures library calibration offset vs `K3.25-v1`)
+   - `K4-bf16core` (all `37,152` experts from `K4-Core-K6` + BF16/F32 core — library upper bound)
+   - `K3-bf16core` (all `37,152` experts from `K3-v1` + BF16/F32 core — library lower bound)
+3. Record P-A KL, P-B KL, and both `D_margin_build` components on all four.
+- **Gate P1 (`L1.1–L1.3`):** Restart margin spread `< 0.05` nat (`0.0` target) and P-B diff `0.0`; each retained probe component separates `K4-bf16core` above `K3.25-rebuilt` (95% CI excluding `0`) with fragile/negative items on `K3.25-rebuilt`; `|KL_PB(K3.25-rebuilt) − KL_PB(K3.25-v1)| ≤ 0.003` nats (else diagnose calibration offset first).
+
+### Phase 2 — Coarse Damage Map: Layer-Band & Targeted Role Localization (`~3.5–5.0 GPU-h`, **Wall ETA: ~3.5–5 h**)
+1. **Stage 2A — 7 Layer-Band Scan (14 flips, `~3.5 GPU-h` at `~15 min/flip`: `0.5 min` stitch + `2 min` launch + `12 min` probe/KL):**
+   - Partition `L03–L44` into **7 six-layer bands** (`B0: L03–08`, `B1: L09–14`, `B2: L15–20`, `B3: L21–26`, `B4: L27–32`, `B5: L33–38`, `B6: L39–44`), plus optional `L45` (MTP) check.
    - Starting from `K3.25-rebuilt` (25% K4 per band):
-     - **7 downward flips (band → 0% K4):** identify cheapest safe **source** bands (zero hit-list regressions, lowest $\Delta\text{KL}/\text{MiB}$ and $\Delta m/\text{MiB}$).
-     - **7 upward flips (band → 100% K4):** identify highest-value **sink** bands (largest margin recovery on fragile/failing items and $\Delta\text{KL}/\text{MiB}$).
-   - Measure both `D_margin_build` and P-B KL (full or fast build subset) on every flip.
-   - Report rank correlation $\rho$ (with bootstrap CI) between $\Delta\text{KL}/\text{MiB}$ and $\Delta m/\text{MiB}$ across bands (Kintsugi Step 3).
-2. **Stage 2B — Targeted Role Split (optional, ~1 GPU-h):**
-   - On the top 2–3 sink bands and top 2–3 source bands, flip `gate_proj`, `up_proj`, and `down_proj` separately to test whether `K3.25-v1`'s fixed `3:8:5` (`gate:down:up`) ratio should also shift per depth band.
-- **Gate P2 (Go/No-Go):**
-  - Meaningful sensitivity spread across bands (≥ 2× ratio in $\Delta m/\text{MiB}$ or $\Delta\text{KL}/\text{MiB}$ between best sink and cheapest source bands, with at least one safe source band having 0 hit-list regressions). If all bands are flat within noise, stop and publish a clean negative result (confirming uniform layer allocation is near-optimal on GLM-5.3-Flash).
+     - **7 upward flips (band → 100% K4, `+3.80 GiB` each):** measure sink recovery ($\Delta m_A/\text{MiB}$, $\Delta m_B/\text{MiB}$, $\Delta\text{KL}/\text{MiB}$).
+     - **7 downward flips (band → 0% K4, `−1.27 GiB` each):** identify safe source bands (`0` new negative-margin flips).
+   - Report rank correlation $\rho$ (with bootstrap CI) between $\Delta\text{KL}/\text{MiB}$ and $\Delta m/\text{MiB}$ across bands.
+2. **Stage 2B — Targeted Role Split (optional, `~1.0–1.5 GPU-h`):** On the top 2 sink bands, test `gate_proj` / `up_proj` / `down_proj` separately.
+- **Gate P2 (`L2.1–L2.2`):** `≥ 2.0×` sensitivity spread between best sink and cheapest safe source band in $\Delta m/\text{MiB}$ or $\Delta\text{KL}/\text{MiB}$. If flat across bands within noise, stop early and publish a clean negative result.
 
-### Phase 3 — Iso-Bitrate Repair & Held-Out Confirmation on CuteAFD v6.0.0 (~6–8 GPU-h)
-1. **Construct candidate allocations (from the same `K3-v1` + `K4-Core-K6` library):**
-   - **`K3.25-Kintsugi-iso` (exact 3.25 bpw, 9,072 K4 projections):** Exchange K4 projections from cheapest safe source bands (down to `0%`) into top task-margin sink bands (up to `75–100%`) at equal byte budget (within `0.1%`).
-   - **`K3.25-KL-iso` (diagnostic control, exact 3.25 bpw):** Same budget allocated strictly by P-B $\Delta\text{KL}/\text{MiB}$ (directly tests Kintsugi's thesis: task-margin vs average-KL allocation on a 288-expert MoE).
-   - **`K3.38-Kintsugi` (optional headroom arm):** Keep `K3.25-rebuilt` intact and upgrade the top 1–2 sink bands to `100%` K4 (`+~6–10` GiB total, preserving >3.5M KV tokens on vLLM).
-2. **Held-out confirmation on CuteAFD v6.0.0 (pre-registered in `protocols/` before first request):**
-   - Full P-A + P-B KL vs BF16 (confirming no catastrophic regression on untouched windows).
-   - **60-item Context-Probe graded tasks at 4K and 127K (4 passes, paired item bootstrap):** Primary endpoint is `127K` ITT field score and unfinished count against `K3.25-v1` and `K3.25-rebuilt` (using held-out items/seeds not in `D_margin_build`).
-- **Gate P3 (Ship to Cross-Engine Confirmation):**
-  - Passes all KL non-inferiority lines AND resolves a statistically detected gain (95% CI excluding 0) on held-out 127K graded tasks or held-out recall margins against both `K3.25-rebuilt` and native `K3.25-v1`.
+### Phase 3 — Targeted Repair & Held-Out Confirmation on CuteAFD `v6.0.0` (`~7–11 GPU-h`, **Wall ETA: ~7–12 h**)
+1. **Candidates (built from the same `K3-v1` + `K4-Core-K6` library):**
+   - **Primary deployment candidate — `K3.35–K3.45-Kintsugi` (targeted band upgrade):** Keep `K3.25-rebuilt` intact and upgrade the top 1–2 Kintsugi-located sink bands to `100%` K4 (`+3.80 GiB` / `3.35 bpw` for 1 band; `+7.59 GiB` / `3.45 bpw` for 2 bands; planner still admits `~4.9–5.6M` KV tokens on CuteAFD `v6.0.0` and `> 3.5M` on vLLM `v0.9.2`). Fewer degrees of freedom, larger expected effect size, and cleaner cross-engine transfer than a fine-grained source/sink exchange.
+   - **Secondary scientific candidates (iso-bitrate, exact `3.25 bpw` / `9,072` K4 projections):**
+     - `K3.25-Kintsugi-iso`: exchange K4 from cheapest safe source bands (`0%`) into top task-margin sink bands (`75–100%`) at exact matched bytes (`0 B` tensor delta).
+     - `K3.25-KL-iso`: same matched byte budget allocated strictly by P-B $\Delta\text{KL}/\text{MiB}$ (tests task-margin vs KL-only allocation).
+2. **Power statement (stated in advance):**
+   - **High-power continuous gate (`D_margin_heldout` + untouched P-A/P-B):** resolves small margin/KL shifts cleanly (`~±0.05–0.15` nat on margins, `~±0.0015` nat on P-B KL).
+   - **127K graded task confirmation (60 items × 4 passes, `max_tokens = 32,768`):** paired CI half-width is `~±3.5–4.0 pp` (so at 4 passes, only shifts `≳ 4 pp` exclude `0`; smaller `2–3 pp` gains read as `"not detected"` unless extended to 8 passes, where half-width tightens to `~±2.5–2.8 pp`). We therefore report **both** `candidate − K3.25` (improvement), `candidate − K4-bf16core` (remaining gap & bound), **unfinished-reply counts**, and **exact GiB cost**.
+- **Gate P3 (`L3.1–L3.3`):** Passes KL non-inferiority, shows statistically detected improvement on `D_margin_heldout` (95% CI excluding `0`), and closes the 127K unfinished-reply / task gap toward `K4-bf16core` cleanly enough to justify Phase 4 carry-over testing.
 
-### Phase 4 — Cross-Engine Carry-Over Confirmation on vLLM Fork v0.9.2 (~5–7 GPU-h, only if Gate P3 passes)
-1. Mount the winning CuteAFD-selected checkpoint via `MODEL_DIR_OVERRIDE` on unmodified `glm53-flash-exl3-k3.25@tpurtell+v0.9.2` (`sha256:ea0430aa`).
-2. Run paired comparison (`K3.25-Kintsugi-iso` vs native `K3.25-v1`, identical serving env):
-   - **P-A + P-B static check** (2 repeats each to cover vLLM's `±0.0006` nat chunked-prefill jitter).
-   - **127K Context-Probe graded tasks** (4 passes) and **`tool-eval-bench`** (88 scenarios, 3 repeats, seeds 1001–1003; baseline `160/163/160`).
-   - **Speed & VRAM check:** Block T subset (1K/8K/32K/128K code & reasoning, C1 and C4/C16), DFlash2 acceptance (~51% baseline), and KV pool tokens (`4.71M` baseline).
-- **Gate P4 (Final Ship Line):** Held-out task improvement carries over onto vLLM v0.9.2, `tool-eval-bench` stays non-inferior (`≥ 159/176` mean), C1 decode stays within `≥ 95%` of baseline (`~145–150 tok/s`), and KV pool remains `~4.71M` tokens (for iso-bitrate).
+### Phase 4 — Cross-Engine Carry-Over on vLLM Fork `v0.9.2` (`~6.5–8 GPU-h`, **Wall ETA: ~6.5–8 h**, gated on Phase 3)
+1. Mount the Phase 3 finalist via `MODEL_DIR_OVERRIDE` on unmodified `glm53-flash-exl3-k3.25@tpurtell+v0.9.2` (`sha256:ea0430aa`).
+2. Paired run (`finalist` vs native `K3.25-v1`):
+   - **P-A + P-B** (2 repeats each for vLLM chunked-prefill jitter): `~1.0 GPU-h`.
+   - **60-item Context-Probe at 4K & 127K** (4 passes, `max_tokens = 32,768`): `~4.0–5.0 GPU-h`.
+   - **`tool-eval-bench`** (88 scenarios × 3 repeats, seeds 1001–1003; baseline `160/163/160`) + **Block T speed & KV pool check**: `~1.5–2.0 GPU-h`.
+- **Gate P4 (`L4.1–L4.3`):** Held-out 127K improvement / unfinished-reply reduction carries over on vLLM `v0.9.2`, `tool-eval-bench` stays non-inferior (`≥ 159/176` mean), C1 code decode stays `≥ 95%` of baseline (`145–150 tok/s`), and KV pool stays `≥ 3.5M` tokens (`≥ 4.5M` if iso-bitrate).
 
 ---
 
-## Resource Budget Summary
+## Resource & ETA Summary
 
-| Phase | Engine | Est. GPU-h | Disk Scratch | Hard Kill Gate |
-|---|---|---:|---:|---|
-| Phase 0 (CPU audit + stitcher + planner) | CPU / CuteAFD planner | 0 h | ~140 GiB | Gate P0 |
-| Phase 1 (Determinism + probe validation) | CuteAFD v6.0.0 | ~1.5 h | ~150 GiB | Gate P1 |
-| Phase 2 (Layer-band damage map) | CuteAFD v6.0.0 | ~2.5–4.0 h | ~150 GiB rolling | Gate P2 |
-| Phase 3 (Repair + CuteAFD confirmation) | CuteAFD v6.0.0 | ~6–8 h | ~150 GiB rolling | Gate P3 |
-| Phase 4 (vLLM v0.9.2 carry-over) | vLLM fork v0.9.2 | ~5–7 h | ~200 GiB temp dumps | Gate P4 |
-| **Total (if all gates pass)** | | **~15–20.5 h** | **≤ 200 GiB rolling** | Early stop at 0 h / 1.5 h / 5 h |
+| Phase | Engine | GPU-h | Wall ETA | Disk Scratch | Hard Kill Gate |
+|---|---|---:|---:|---:|---|
+| Phase 0 (Stitcher + planner) | CPU / CuteAFD planner | `0 h` | **Done (`~6 min`)** | `172 GiB` | Gate P0 (**PASS**) |
+| Phase 1 (Determinism + two-component probe) | CuteAFD `v6.0.0` | `~1.5–1.8 h` | `~2 h` | `~170 GiB` | Gate P1 |
+| Phase 2 (7-band damage map + optional roles) | CuteAFD `v6.0.0` | `~3.5–5.0 h` | `~3.5–5 h` | `~170 GiB` rolling | Gate P2 |
+| Phase 3 (Repair + CuteAFD confirmation) | CuteAFD `v6.0.0` | `~7–11 h` | `~7–12 h` | `~180 GiB` rolling | Gate P3 |
+| Phase 4 (vLLM `v0.9.2` carry-over) | vLLM fork `v0.9.2` | `~6.5–8 h` | `~6.5–8 h` | `~200 GiB` temp dumps | Gate P4 |
+| **Total (if all gates pass)** | | **~18.5–26 h** | **~19–27 h** | **≤ 200 GiB rolling** | Early stop at P1 / P2 / P3 |
