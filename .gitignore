@@ -1,0 +1,17 @@
+# Python / environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Large model artifacts, dumps, raw logs, and scratch
+*.safetensors
+*.bin
+*.pt
+*.npz
+*.npy
+*.gguf
+dumps/
+scratch/
+raw_logs/
+.DS_Store
