@@ -29,17 +29,24 @@ All 10 allocation maps are generated deterministically by [`tools/make_stage2b_m
 
 ---
 
-## 2. Stage 2B Questions & Phase 3 Selection Rules (`L2.3`)
+## 2. Stage 2B Questions & Pre-Data Selection Rules (`L2.3`, Amendment 2B.1)
 
-1. **Null jitter & within-layer Hessian value (`null-shuf-b2`, `null-shuf-b5`):**
-   - Directly measures single-band zero-bitrate `B_close` jitter (`|ΔB_close|` envelope) and shows how much `K3.25-v1`'s within-layer Hessian picks outperform random K4 picks inside a high-sensitivity band (`B2`) vs a low-sensitivity band (`B5`).
-2. **Role dominance inside `B2` (`gate` / `up` / `down`):**
-   - Identifies whether `B2`'s `36.0%` KL spike concentrates in a single projection role (`ΔKL_PB / GiB` and `ΔB_close / GiB`).
-3. **Head-to-head routing test at exact `+3,888 MiB` (`3.3488 bpw`):**
-   - Compares `b1b2-hot-route-3888` and `b1b2-hot-routed-err-3888` directly against Stage 2A's full-band `b2-up-k4` (`ΔKL_PB = −0.004713`, `ΔB_close = +0.1041`) and `b1-up-k4` (`ΔKL_PB = −0.002583`, `ΔB_close = +0.2045`) at **identical byte cost (`+3.7969 GiB`)**.
-4. **Iso-bitrate feasibility (`0 B` delta, `3.2500 bpw`):**
-   - Tests whether `iso-b0b5b6-to-b2` or `iso-b0b5b6-to-hot-b1b2` achieves statistically significant P-B KL reduction (95% CI excluding `0`) and positive `B_close` movement at **zero extra bytes**.
-5. **Phase 3 candidate selection (`L2.3`):**
-   - **Primary deployment candidate (`K3.35–K3.45`):** Advance `b1b2-up-k4` (`K3.45`, `+7.59 GiB`) AND/OR the best `+3.80 GiB` (`K3.35`) arm (`b2-up-k4` vs `b1b2-hot-route-3888` vs `b1b2-hot-routed-err-3888`) if the `+3.80 GiB` winner achieves substantially higher recovery per GiB.
-   - **Secondary iso-bitrate candidate (`K3.25-iso`):** Advance whichever of `iso-b0b5b6-to-b2` and `iso-b0b5b6-to-hot-b1b2` achieves stronger verified P-B KL reduction and better `B_close` without regression (`ΔKL_PB < 0` with CI excluding `0`).
-   - **Neutral-author `B_close` check:** Run on the selected Phase 3 candidates + `k325-rebuilt` + `k4-bf16core` at Phase 3 entry before final held-out task confirmation.
+> **Pre-data Amendment 2B.1 (`2026-11-23`, recorded before Flip 1 of Stage 2B completed):** Locks the quantitative interpretation of the two within-band shuffles, the `B_close` detection threshold, the iso-bitrate selection criterion, and the `K3.35` vs `K3.45` advancement rule before any Stage 2B result is observed.
+
+1. **Shuffle interpretation (`null-shuf-b2`, `null-shuf-b5` — two shuffles, not a pure null):**
+   - Permuting which projections are K4 inside `B2` or `B5` removes `K3.25-v1`'s within-layer Hessian selection at matched bytes (`0 B` delta).
+   - **P-B `gen` KL:** Read each shuffle's `ΔKL_PB` (with its cluster-bootstrap 95% CI) as the empirical **pick value** of `K3.25-v1`'s within-layer Hessian selection vs random selection in `B2` and `B5`.
+   - **`B_close` jitter scale:** Compute (a) the pooled per-item `ΔB_close` SD across the two shuffles and (b) `S_max = max(|ΔB_close(null-shuf-b2)|, |ΔB_close(null-shuf-b5)|)`. Always qualify this envelope as derived from **two shuffles** (a rough jitter scale, not a full null distribution).
+2. **`B_close` detection rule:**
+   - A Stage 2B arm's `B_close` change counts as a **detected signal** only if **BOTH** (a) its paired bootstrap 95% CI vs `k325-rebuilt` excludes `0` **AND** (b) `|ΔB_close| > S_max`. Shifts failing either clause read as within the two-shuffle jitter scale (`"not detected"`).
+3. **Role dominance inside `B2` (`gate` / `up` / `down`):**
+   - Identifies whether `B2`'s `36.0%` P-B KL spike concentrates in a single projection role (`−ΔKL_PB / GiB`, paired 95% CIs).
+4. **Head-to-head routing test at exact `+3,888 MiB` (`3.3488 bpw`):**
+   - Compares `b1b2-hot-route-3888` and `b1b2-hot-routed-err-3888` directly against Stage 2A's full-band `b2-up-k4` (`ΔKL_PB = −0.004713`) via direct paired `53`-cluster P-B KL contrasts (`pair-hot-*-vs-b2-up.json`) at identical byte cost (`+3.7969 GiB`).
+5. **Pre-registered Phase 3 candidate selection rules (`L2.3`):**
+   - **Primary deployment candidate (`K3.35` vs `K3.45`):**
+     - Let `best_3888` be the `+3.80 GiB` arm (`b2-up-k4`, `b1b2-hot-route-3888`, or `b1b2-hot-routed-err-3888`) with the largest P-B `gen` KL reduction (`−ΔKL_PB`, preferring a hot-K3 arm over `b2-up-k4` only if its direct paired P-B KL 95% CI vs `b2-up-k4` excludes `0`, else keeping simpler full-band `b2-up-k4`).
+     - Advance **`b1b2-up-k4` (`K3.45`, `+7.59 GiB`)** as primary deployment candidate **AND** also advance `best_3888` (`K3.35`, `+3.80 GiB`) as an efficiency candidate if `best_3888` achieves **`≥ 1.25×`** the P-B KL recovery per GiB of `b1b2-up-k4` (equivalently `≥ 62.5%` of `b1b2-up-k4`'s total KL reduction at half the byte cost). If `b1b2-up-k4` recovers `< 1.25×` `best_3888`'s total KL reduction (sub-additive), advance `best_3888` alone as primary.
+   - **Secondary iso-bitrate candidate (`K3.25-iso`, `0 B` delta):**
+     - Advance whichever of `iso-b0b5b6-to-b2` and `iso-b0b5b6-to-hot-b1b2` achieves the largest P-B `gen` KL reduction (breaking ties in favor of simpler `iso-b0b5b6-to-b2` if direct paired `pair-iso-hot-vs-iso-b2.json` 95% CI includes `0`), provided its paired P-B `gen` KL 95% CI vs `k325-rebuilt` is strictly `< 0` AND it shows **no detected negative `B_close` regression** under Rule 2 above (not requiring a coin-flip positive `B_close` point estimate).
+   - **Neutral-author `B_close` check:** Run on the selected Phase 3 candidates + `k325-rebuilt` + `k4-bf16core` at Phase 3 entry before final held-out `64K–127K` task confirmation.
