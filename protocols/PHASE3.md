@@ -22,10 +22,10 @@ Runs three strictly held-out / neutral evaluations before spending long generati
    - Run on `K3.45-B1B2`, `K3.35-B2`, and `K3.25-iso-hot` and paired directly against Phase 1's untouched `k325-native`, `k325-rebuilt`, and `k4-bf16core` P-A receipts.
 2. **Untouched `D_margin_heldout` (`n = 36` items, `127K`, frozen in Phase 1 and NEVER touched in Phases 1–2):**
    - Run inline via `/v1/bench/probe` (`top_k = 5`, zero dumps) across all 6 arms (`k325-native`, `k325-rebuilt`, `k4-bf16core`, `K3.45-B1B2`, `K3.35-B2`, `K3.25-iso-hot`).
-3. **Independent-Quantizer Neutral-Author `D_margin_neutral` (`build` `n = 24` items, `127K`, ZERO EXL3-MCG authorship — `Amendment 3A.1`):**
-   - Built via `tools/build_margin_probe.py --source-mode neutral-public` from the published independent-quantizer **`2026-11-10-context-probe` `exlr8-k4`** run (`23/24` build items from `EXLR8 K4`, zero shared weights with `K3-v1`, `K3.25-v1`, or `K4-Core-K6`; `1/24` fallback `k325-fp8c`).
-   - *(Pre-data `Amendment 3A.1`, recorded before `margins_neutral/` began: the initial draft sourced `anchor`, which shares `K4-Core-K6` expert weights bit-for-bit with `k4-bf16core`; replaced atomically with independent `exlr8-k4` before any neutral-probe GPU request ran.)*
-   - Run across all 6 arms to test whether `k4-bf16core > k325-rebuilt` and `candidate > k325-rebuilt` on `B_close` hold under an independent quantizer's trajectories.
+3. **Neutral-Author `D_margin_neutral` (`build` `n = 24` items, `127K`: `23/24` independent-quantizer `exlr8-k4`, `1/24` K3.25-authored fallback `ledger-118` — `Amendment 3A.1`):**
+   - Built via `tools/build_margin_probe.py --source-mode neutral-public` from the published independent-quantizer **`2026-11-10-context-probe` `exlr8-k4`** run (`23/24` build items from `EXLR8 K4`, zero shared weights with EXL3-MCG; `1/24` K3.25-authored fallback `k325-fp8c`, sensitivity-checked with `ledger-118` excluded).
+   - *(Pre-data `Amendment 3A.1`, recorded before `margins_neutral/` began: the initial draft sourced `anchor`, which shares `K4-Core-K6` expert weights bit-for-bit with `k4-bf16core`; replaced atomically with `exlr8-k4` before any neutral-probe GPU request ran.)*
+   - Run across all 6 arms to test whether `k4-bf16core > k325-rebuilt` and `candidate > k325-rebuilt` on `B_close` hold under independent-quantizer trajectories.
 
 ### Pre-Registered Stage 3A Power & Gate (`L3.1`, `L3.2`, `Amendment 3A.1`)
 - **Pre-data P-A power statement (`51,175` rows, `25` clusters; Phase 1 paired half-width `~0.0045` nat):**
@@ -51,8 +51,10 @@ Runs three strictly held-out / neutral evaluations before spending long generati
 - **Primary 127K endpoint & anchor-gap prerequisite (`Amendment 3A.1`):**
   - **Primary 127K endpoint:** Overall 127K accuracy (`mean_score` across `60 items × 4 passes = 240` replies; paired 95% CI half-width `~±3.5–4.0 pp`), with **unfinished-reply rate (`(cap + repetition) / 240`)** as co-primary diagnostic.
   - **Anchor-gap prerequisite:** Prior `−5.73 pp` separation came from the CuteAFD `v5.0.0` `k325-fp8c` graft; `k4-bf16core − k325-native` has not yet been measured on CuteAFD `v6.0.0` with BF16/F32 core. Therefore, **first evaluate `G_anchor = score_127k(k4-bf16core) − score_127k(k325-native)`**. If `G_anchor`'s 95% CI includes `0` at 4 passes, report `"127K anchor gap not reproduced on CuteAFD v6.0.0 / BF16-core at 4 passes (MDE ±3.5–4.0 pp)"` with **no candidate task ranking** (extending to 8 passes only if point `G_anchor ≥ +2.5 pp`).
-- **`L3.3` (Numeric Phase 3 → Phase 4 Gate, when `G_anchor` is detected):**
-  - Advance the strongest candidate to Phase 4 (`vLLM v0.9.2` carry-over) if:
+- **`L3.3` (Numeric Phase 3 → Phase 4 Gate, when `G_anchor` is detected — tightened by pre-data `Amendment 3B.1` before `G_anchor` check):**
+  - Evaluated via [`tools/analyze_phase3b_v2.py`](../tools/analyze_phase3b_v2.py) (original `analyze_phase3b.py` left untouched to preserve `stage3b/FROZEN.json` integrity during live runs):
     1. `L3.1` passed,
-    2. 4K accuracy shows no detected regression (`Δ4K ≥ −1.5 pp` or 95% CI includes `0`), AND
-    3. Candidate recovers **`≥ 50%`** of `G_anchor` on 127K overall accuracy (or cuts unfinished replies by **`≥ 50%`** of `k4-bf16core`'s reduction) without regressing finished-only accuracy.
+    2. 4K accuracy shows no detected regression (`Δ4K ≥ −1.5 pp` or 95% CI includes `0`),
+    3. Candidate recovers **`≥ 50%`** of `G_anchor` on 127K overall accuracy (**reported with paired item-cluster bootstrap 95% CI**), **OR** recovers **`≥ 50%`** of `k4-bf16core`'s 127K unfinished-reply reduction **ONLY IF `k4-bf16core`'s own paired unfinished-rate reduction vs `k325-native` is itself detected (95% CI excluding `0`)** (preventing tiny integer-count ratios like `1/2` from triggering advancement; also reported with bootstrap 95% CI), without regressing finished-only accuracy.
+  - **Arm-level vs item-level `B_close` note (`Amendment 3B.1`):** Because per-item `B_close` correlates weakly across trajectory authors (`r ≈ 0.23`), the end-of-thinking link to Stage 3B unfinished replies is evaluated at the **arm level**; any per-item `B_close` correlation is labeled exploratory.
+  - **Optional post-3B authorship check (`Amendment 3B.1`):** `probe_neutral/manifest.json` already contains `36` untouched neutral held-out items (`35 exlr8-k4 + 1 k325-fp8c`); scoring them after Stage 3B (`~1.5–2 wall-h`) cleanly separates item-set vs self-authorship on `B1`'s held-out `B_close` lift without affecting any Stage 3B gate.
