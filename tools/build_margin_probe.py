@@ -63,7 +63,7 @@ def find_perfect_k4_trajectory(item_id: str, runs_root: Path, source_mode: str =
     """Find a 100%-correct (or highest-scoring) finished trajectory at 128k."""
     if source_mode == "neutral-public":
         sources = [
-            ("anchor", runs_root / "2026-11-10-context-probe/tasks/anchor/m0"),
+            ("exlr8-k4", runs_root / "2026-11-10-context-probe/tasks/exlr8-k4/m0"),
             ("k325-fp8c", runs_root / "2026-11-15-fp8-core-contrasts/tasks/k325-fp8c/m0"),
         ]
     else:

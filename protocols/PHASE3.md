@@ -22,19 +22,25 @@ Runs three strictly held-out / neutral evaluations before spending long generati
    - Run on `K3.45-B1B2`, `K3.35-B2`, and `K3.25-iso-hot` and paired directly against Phase 1's untouched `k325-native`, `k325-rebuilt`, and `k4-bf16core` P-A receipts.
 2. **Untouched `D_margin_heldout` (`n = 36` items, `127K`, frozen in Phase 1 and NEVER touched in Phases 1–2):**
    - Run inline via `/v1/bench/probe` (`top_k = 5`, zero dumps) across all 6 arms (`k325-native`, `k325-rebuilt`, `k4-bf16core`, `K3.45-B1B2`, `K3.35-B2`, `K3.25-iso-hot`).
-3. **Public Neutral-Author `D_margin_neutral` (`build` `n = 24` items, `127K`, ZERO K4-EXL3 authorship):**
-   - Built via `tools/build_margin_probe.py --source-mode neutral-public` exclusively from already-public non-K4 runs (`2026-11-10-context-probe` `anchor` and `2026-11-15-fp8-core-contrasts` `k325-fp8c`).
-   - Run across all 6 arms to test whether `k4-bf16core > k325-rebuilt` and `candidate > k325-rebuilt` on `B_close` hold when K4 did not author the reasoning trajectories.
+3. **Independent-Quantizer Neutral-Author `D_margin_neutral` (`build` `n = 24` items, `127K`, ZERO EXL3-MCG authorship — `Amendment 3A.1`):**
+   - Built via `tools/build_margin_probe.py --source-mode neutral-public` from the published independent-quantizer **`2026-11-10-context-probe` `exlr8-k4`** run (`23/24` build items from `EXLR8 K4`, zero shared weights with `K3-v1`, `K3.25-v1`, or `K4-Core-K6`; `1/24` fallback `k325-fp8c`).
+   - *(Pre-data `Amendment 3A.1`, recorded before `margins_neutral/` began: the initial draft sourced `anchor`, which shares `K4-Core-K6` expert weights bit-for-bit with `k4-bf16core`; replaced atomically with independent `exlr8-k4` before any neutral-probe GPU request ran.)*
+   - Run across all 6 arms to test whether `k4-bf16core > k325-rebuilt` and `candidate > k325-rebuilt` on `B_close` hold under an independent quantizer's trajectories.
 
-### Pre-Registered Stage 3A Gate (`L3.1`, `L3.2`)
+### Pre-Registered Stage 3A Power & Gate (`L3.1`, `L3.2`, `Amendment 3A.1`)
+- **Pre-data P-A power statement (`51,175` rows, `25` clusters; Phase 1 paired half-width `~0.0045` nat):**
+  - If Stage 2B's P-B KL headroom shares transfer proportionally to untouched P-A (`0.01658` nat K4 headroom), expected P-A drops are:
+    - `K3.45-B1B2` (`50.2%`): `~−0.0083` nat (**well-powered / detectable**),
+    - `K3.35-B2` (`36.0%`): `~−0.0060` nat (**borderline**),
+    - `K3.25-iso-hot` (`16.3%`): `~−0.0027` nat (**likely underpowered on P-A alone** — a non-detection on P-A therefore does not establish `"no transfer"`, and its `B_close = −0.172` Stage 2B watch item is tracked separately).
+- **Winner's curse note on `D_margin_heldout` (`n = 36`):** Because `K3.45-B1B2` was selected after observing `D_margin_build` (`+0.173` nat), expect a smaller held-out `B_close` point estimate.
 - **`L3.1` (Untouched P-A & P-B KL generalization & non-inferiority):**
   - Non-inferiority: candidate P-A KL does not regress by `> +0.003` nats and P-B KL does not regress by `> +0.002` nats vs BOTH `k325-rebuilt` and `k325-native`.
-  - Generalization: candidate achieves **statistically detected untouched P-A KL reduction** (`ΔKL_PA < 0`, paired 25-cluster 95% CI excluding `0`) vs `k325-rebuilt` (confirming Stage 2's P-B depth gains transfer to an independent distribution).
-- **`L3.2` (Untouched `D_margin_heldout` `n = 36` + Neutral-Author `D_margin_neutral` `n = 24`):**
+  - Generalization: candidate achieves **statistically detected untouched P-A KL reduction** (`ΔKL_PA < 0`, paired 25-cluster 95% CI excluding `0`) vs `k325-rebuilt`.
+- **`L3.2` (Untouched `D_margin_heldout` `n = 36` + Independent-Quantizer `D_margin_neutral` `n = 24`):**
   - Report paired bootstrap 95% CIs (`10,000` resamples, seed `20261123`) for `B_close` vs BOTH `k325-rebuilt` and `k325-native` on both `D_margin_heldout` (`n = 36`) and `D_margin_neutral` (`n = 24`), plus the neutral-author `k4-bf16core − k325-rebuilt` validity check.
-  - Note: Phase 1–2 established single-band `B_close` jitter (`SD = 0.275` nat across two shuffles); `L3.2` passes cleanly if a candidate improves `D_margin_heldout` `B_close` over both controls with 95% CI excluding `0`, and neutral-author `k4 − k325-rebuilt` is reported transparently regardless of outcome.
 - **Stage 3A → Stage 3B Advancement Rule:**
-  - Advance into Stage 3B: **`k325-native`** (deployment baseline) + **`K3.45-B1B2`** (if it passes `L3.1`) + **`K3.35-B2`** and/or **`K3.25-iso-hot`** if they pass `L3.1` with strong untouched P-A transfer (plus **`k4-bf16core`** as upper anchor, capped at 3–4 total Stage 3B arms = `~9–12` wall-h).
+  - Advance into Stage 3B: **`k325-native`** (deployment baseline) + **`k4-bf16core`** (upper anchor) + **`K3.45-B1B2`** (if it passes `L3.1`) + **`K3.35-B2`** and/or **`K3.25-iso-hot`** if they pass `L3.1` (capped at 3–4 total Stage 3B arms = `~9–12` wall-h).
 
 ---
 
@@ -42,5 +48,11 @@ Runs three strictly held-out / neutral evaluations before spending long generati
 
 - **Suite:** Full 60-item measured Context-Probe (`20 join`, `20 ledger`, `20 trace`) at **both `4K` and `128K` (`127K` content)**, **`4` passes (`single-rep0..rep3`)**, concurrency `8`, **`max_tokens = 32,768`** (strictly below CuteAFD's `65,536` RepeatGuard shingle cap), temperature `1.0`, `top_p = 0.95`.
 - **Measured runtime on CuteAFD `v6.0.0`:** `~47 min / rep` → `~3.1 wall-h / arm` for 4 passes (`~9.3–12.4 wall-h` for 3–4 arms).
-- **Power statement (stated in advance):** At 60 items × 4 passes (`240` 128K replies per arm), paired bootstrap 95% CI half-width is `~±3.5–4.0 pp`. Report `candidate − k325-native`, `candidate − k4-bf16core`, finished-only accuracy, unfinished counts (`cap` vs `repetition`), and exact GiB / KV-pool cost.
-- **`L3.3` (Phase 3 → Phase 4 Gate):** Advance the strongest candidate to Phase 4 (`vLLM v0.9.2` carry-over) if it passes `L3.1`, shows no 4K regression, and moves 127K task accuracy and/or unfinished-reply count cleanly toward `k4-bf16core` without regression (optionally extending to 8 passes if borderline within `±2.5 pp`).
+- **Primary 127K endpoint & anchor-gap prerequisite (`Amendment 3A.1`):**
+  - **Primary 127K endpoint:** Overall 127K accuracy (`mean_score` across `60 items × 4 passes = 240` replies; paired 95% CI half-width `~±3.5–4.0 pp`), with **unfinished-reply rate (`(cap + repetition) / 240`)** as co-primary diagnostic.
+  - **Anchor-gap prerequisite:** Prior `−5.73 pp` separation came from the CuteAFD `v5.0.0` `k325-fp8c` graft; `k4-bf16core − k325-native` has not yet been measured on CuteAFD `v6.0.0` with BF16/F32 core. Therefore, **first evaluate `G_anchor = score_127k(k4-bf16core) − score_127k(k325-native)`**. If `G_anchor`'s 95% CI includes `0` at 4 passes, report `"127K anchor gap not reproduced on CuteAFD v6.0.0 / BF16-core at 4 passes (MDE ±3.5–4.0 pp)"` with **no candidate task ranking** (extending to 8 passes only if point `G_anchor ≥ +2.5 pp`).
+- **`L3.3` (Numeric Phase 3 → Phase 4 Gate, when `G_anchor` is detected):**
+  - Advance the strongest candidate to Phase 4 (`vLLM v0.9.2` carry-over) if:
+    1. `L3.1` passed,
+    2. 4K accuracy shows no detected regression (`Δ4K ≥ −1.5 pp` or 95% CI includes `0`), AND
+    3. Candidate recovers **`≥ 50%`** of `G_anchor` on 127K overall accuracy (or cuts unfinished replies by **`≥ 50%`** of `k4-bf16core`'s reduction) without regressing finished-only accuracy.
