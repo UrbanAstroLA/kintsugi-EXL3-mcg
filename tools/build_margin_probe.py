@@ -59,16 +59,22 @@ def load_k325_unfinished_counts(runs_root: Path) -> Counter:
     return counts
 
 
-def find_perfect_k4_trajectory(item_id: str, runs_root: Path) -> Tuple[dict, str]:
-    """Find a 100%-correct (or highest-scoring) finished K4 trajectory at 128k."""
-    sources = [
-        ("v6-bf16core", runs_root / "2026-11-20-v6-context/tasks/v6-bf16core/c0"),
-        ("v6-bf16core-bridge", runs_root / "2026-11-19-v6-bridge/tasks/v6-bf16core/b0"),
-        ("v6-hqa", runs_root / "2026-11-19-v6-bridge/tasks/v6-hqa/b0"),
-        ("fp8c", runs_root / "2026-11-15-fp8-core-contrasts/tasks/fp8c/m0"),
-        ("hqa", runs_root / "2026-11-10-context-probe/tasks/hqa/m0"),
-        ("anchor", runs_root / "2026-11-10-context-probe/tasks/anchor/m0"),
-    ]
+def find_perfect_k4_trajectory(item_id: str, runs_root: Path, source_mode: str = "default") -> Tuple[dict, str]:
+    """Find a 100%-correct (or highest-scoring) finished trajectory at 128k."""
+    if source_mode == "neutral-public":
+        sources = [
+            ("anchor", runs_root / "2026-11-10-context-probe/tasks/anchor/m0"),
+            ("k325-fp8c", runs_root / "2026-11-15-fp8-core-contrasts/tasks/k325-fp8c/m0"),
+        ]
+    else:
+        sources = [
+            ("v6-bf16core", runs_root / "2026-11-20-v6-context/tasks/v6-bf16core/c0"),
+            ("v6-bf16core-bridge", runs_root / "2026-11-19-v6-bridge/tasks/v6-bf16core/b0"),
+            ("v6-hqa", runs_root / "2026-11-19-v6-bridge/tasks/v6-hqa/b0"),
+            ("fp8c", runs_root / "2026-11-15-fp8-core-contrasts/tasks/fp8c/m0"),
+            ("hqa", runs_root / "2026-11-10-context-probe/tasks/hqa/m0"),
+            ("anchor", runs_root / "2026-11-10-context-probe/tasks/anchor/m0"),
+        ]
     best: Optional[Tuple[float, dict, str]] = None
     for src_label, base in sources:
         if not base.exists():
@@ -156,6 +162,7 @@ def main() -> None:
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--build-per-family", type=int, default=8)
     ap.add_argument("--tail-tokens", type=int, default=8)
+    ap.add_argument("--source-mode", default="default", choices=("default", "neutral-public"))
     args = ap.parse_args()
 
     from tokenizers import Tokenizer  # type: ignore
@@ -201,7 +208,7 @@ def main() -> None:
     for split, id_list in (("build", build_ids), ("heldout", heldout_ids)):
         for item_id in id_list:
             item_obj = json.loads(item_paths[item_id].read_text())
-            traj, src_arm = find_perfect_k4_trajectory(item_id, runs_root)
+            traj, src_arm = find_perfect_k4_trajectory(item_id, runs_root, source_mode=args.source_mode)
 
             user_text = render_single_prompt(item_obj)
             # Match exact tasklib/client nonce prepending if nonce existed on trajectory

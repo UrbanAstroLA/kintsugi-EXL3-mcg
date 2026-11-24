@@ -33,9 +33,11 @@ A complete `K ∈ {3, 4}` MCG EXL3 fit library (`mcg_multiplier = 3417055213`, i
 | [`results/phase0/PHASE0-SUMMARY.md`](results/phase0/PHASE0-SUMMARY.md) | Verified Phase 0 stitcher (`L0.1–L0.2`) and CuteAFD `v6.0.0` CPU planner (`L0.3`) receipts |
 | [`results/phase1/PHASE1-SUMMARY.md`](results/phase1/PHASE1-SUMMARY.md) | Verified Phase 1 determinism (`L1.1`), `B_close` margin probe (`L1.2`), and calibration offset (`L1.3`) receipts |
 | [`results/phase2/PHASE2A-SUMMARY.md`](results/phase2/PHASE2A-SUMMARY.md) | Verified Phase 2 Stage 2A 7-band P-B damage map (`L2.1-v2` PASS: `4.31×` spread, `B1–B2` concentration on `≤ 14.4K` P-B panel) |
+| [`results/phase2/PHASE2B-SUMMARY.md`](results/phase2/PHASE2B-SUMMARY.md) | Verified Phase 2 Stage 2B 10-flip localization (`K3.45-B1B2` `50.2%` KL headroom, `K3.35-B2` `36.0%`, `K3.25-iso-hot` `16.3%` at `0 B`) |
 | [`protocols/PHASE1.md`](protocols/PHASE1.md) | Frozen Phase 1 protocol |
 | [`protocols/PHASE2.md`](protocols/PHASE2.md) | Frozen Phase 2 Stage 2A layer-band scan protocol (with pre-data `Amendment 2A.1`) |
-| [`protocols/PHASE2B.md`](protocols/PHASE2B.md) | Frozen Phase 2 Stage 2B null controls, role splits, routing-targeted hot-K3 & iso-bitrate localization protocol |
+| [`protocols/PHASE2B.md`](protocols/PHASE2B.md) | Frozen Phase 2 Stage 2B protocol (with pre-data `Amendment 2B.1`) |
+| [`protocols/PHASE3.md`](protocols/PHASE3.md) | Frozen Phase 3 Stage 3A (held-out continuous + neutral-author gate) & Stage 3B (`4K–127K` task confirmation) protocol |
 | [`evidence/LINES.md`](evidence/LINES.md) | Pre-registered decision lines per phase |
 | [`evidence/EVIDENCE.md`](evidence/EVIDENCE.md) | Numbered evidence rows traced to artifacts |
 | [`tools/stitch_exl3.py`](tools/stitch_exl3.py) | Zero-dependency per-layer EXL3-MCG checkpoint stitcher and SHA-256 verifier |
@@ -49,8 +51,9 @@ A complete `K ∈ {3, 4}` MCG EXL3 fit library (`mcg_multiplier = 3417055213`, i
 | **Phase 0** — Stitcher & planner verification | **PASS (`L0.1–L0.3`)** | CPU / CuteAFD `v6.0.0` planner | `0 h` | Done (`~6 min`) | `0` header/SHA mismatches; 4/4 `READY to serve`; `27–36 s` per incremental 6-layer band flip |
 | **Phase 1** — Determinism, library offset & two-component margin probe | **PASS (`L1.1–L1.3`)** | CuteAFD `v6.0.0` | `~1.7 h` | Done (`~2.0 h`) | Exact `0.0` restart spread; `B_close` (`</think>`) `+0.277` nat K4 vs K3.25 (`+0.731` vs K3, `23/24`); `A_min` retired; `\|ΔKL_PB\| = 0.0006` |
 | **Phase 2A** — Coarse 7-band damage map (`14` flips) | **PASS (`L2.1-v2`)** | CuteAFD `v6.0.0` | `~3.8 h` | Done (`3.8 h`) | **`4.31×` P-B KL spread (`4.5σ`)**, `ρ_up_down_KL = +0.68`; **`B1–B2 (L09–L20)` carry `55.8%` of P-B KL headroom** (`≤ 14.4K`; `B_close` confirmatory pending 2B shuffles) |
-| **Phase 2B** — Null controls, role splits, routing-targeted & iso-bitrate (`10` flips) | **In Progress** | CuteAFD `v6.0.0` | `~2.7 h` | `~2.7 h` | Shuffle nulls (`B2`, `B5`), `B2` roles, `B1+B2` hot-K3 (`+3.8 GiB`), `B0+B5+B6` iso-bitrate swaps (`0 B`), `B1+B2` additivity |
-| **Phase 3** — Repair (`K3.35–K3.45` primary + `K3.25-iso` secondary) & confirmation | Planned | CuteAFD `v6.0.0` | `~7–11 h` | `~7–12 h` | Held-out margins, neutral-author check, P-A/P-B KL, and 4K/127K tasks |
+| **Phase 2B** — Null controls, role splits, routing-targeted & iso-bitrate (`10` flips) | **PASS (`L2.3`)** | CuteAFD `v6.0.0` | `~2.9 h` | Done (`2.9 h`) | `K3.45-B1B2` (`50.2%` KL headroom in `27.7%` bytes), `K3.35-B2` (`36.0%`, `1.44×` KL/GiB), `K3.25-iso-hot` (`16.3%` at `0 B`, CI `< 0`); shuffle KL `~0` |
+| **Phase 3A** — Held-out continuous gate (P-A, `D_margin_heldout`, neutral-author) | **In Progress** | CuteAFD `v6.0.0` | `~2.7 h` | `~2.7 h` | Untouched P-A (`51K` rows), `D_margin_heldout` (`n=36`), neutral-author `B_close` (`n=24`) |
+| **Phase 3B** — `4K + 127K` 60-item task confirmation (`4` passes) | Planned (gated on 3A) | CuteAFD `v6.0.0` | `~9–12 h` | `~9–12 h` | 60-item Context-Probe (`max_tokens=32,768`) on Stage 3A finalists vs `K3.25-native` & `K4` |
 | **Phase 4** — Cross-engine carry-over | Planned (gated) | vLLM fork `v0.9.2` | `~6.5–8 h` | `~6.5–8 h` | Tasks, `tool-eval-bench`, speed, and KV pool |
 
 ---
