@@ -35,6 +35,7 @@ A complete `K ∈ {3, 4}` MCG EXL3 fit library (`mcg_multiplier = 3417055213`, i
 | [`results/phase2/PHASE2A-SUMMARY.md`](results/phase2/PHASE2A-SUMMARY.md) | Verified Phase 2 Stage 2A 7-band P-B damage map (`L2.1-v2` PASS: `4.31×` spread, `B1–B2` concentration on `≤ 14.4K` P-B panel) |
 | [`results/phase2/PHASE2B-SUMMARY.md`](results/phase2/PHASE2B-SUMMARY.md) | Verified Phase 2 Stage 2B 10-flip localization (`K3.45-B1B2` `50.2%` KL headroom, `K3.35-B2` `36.0%`, `K3.25-iso-hot` `16.3%` at `0 B`) |
 | [`results/phase3/PHASE3A-SUMMARY.md`](results/phase3/PHASE3A-SUMMARY.md) | Verified Phase 3 Stage 3A held-out continuous gate (`L3.1` PASS on all 3; `K3.45-B1B2` `52.8%` P-A KL; `K3.25-iso-hot` `23.7%` P-A KL at `0 B`; `exlr8-k4` neutral check) |
+| [`results/phase3/PHASE3B-SUMMARY.md`](results/phase3/PHASE3B-SUMMARY.md) | Verified Phase 3 Stage 3B 8-pass `127K` task confirmation (`Z_acc = 2.33`, `Z_unf = 2.81` anchor gap detected; **`K3.45-B1B2` FAILS `L3.3`** at `86.90%` vs `87.16%` native / `90.86%` K4) |
 | [`protocols/PHASE1.md`](protocols/PHASE1.md) | Frozen Phase 1 protocol |
 | [`protocols/PHASE2.md`](protocols/PHASE2.md) | Frozen Phase 2 Stage 2A layer-band scan protocol (with pre-data `Amendment 2A.1`) |
 | [`protocols/PHASE2B.md`](protocols/PHASE2B.md) | Frozen Phase 2 Stage 2B protocol (with pre-data `Amendment 2B.1`) |
@@ -54,8 +55,8 @@ A complete `K ∈ {3, 4}` MCG EXL3 fit library (`mcg_multiplier = 3417055213`, i
 | **Phase 2A** — Coarse 7-band damage map (`14` flips) | **PASS (`L2.1-v2`)** | CuteAFD `v6.0.0` | `~3.8 h` | Done (`3.8 h`) | **`4.31×` P-B KL spread (`4.5σ`)**, `ρ_up_down_KL = +0.68`; **`B1–B2 (L09–L20)` carry `55.8%` of P-B KL headroom** (`≤ 14.4K`; `B_close` confirmatory pending 2B shuffles) |
 | **Phase 2B** — Null controls, role splits, routing-targeted & iso-bitrate (`10` flips) | **PASS (`L2.3`)** | CuteAFD `v6.0.0` | `~2.9 h` | Done (`2.9 h`) | `K3.45-B1B2` (`50.2%` KL headroom in `27.7%` bytes), `K3.35-B2` (`36.0%`, `1.44×` KL/GiB), `K3.25-iso-hot` (`16.3%` at `0 B`, CI `< 0`); shuffle KL `~0` |
 | **Phase 3A** — Held-out continuous gate (P-A, `D_margin_heldout`, `exlr8-k4` neutral) | **PASS (`L3.1–L3.2`)** | CuteAFD `v6.0.0` | `~2.9 h` | Done (`2.9 h`) | `K3.45-B1B2`: `52.8%` P-A KL, `80.2%` `[44%, 128%]` K4-authored held-out `B_close`; `K3.25-iso-hot`: `23.7%` P-A KL at `0 B` (`CI < 0`); `exlr8-k4` neutral `+0.252` vs rebuilt (not detected at `n=24`), `+0.271` vs native (`CI > 0`) |
-| **Phase 3B** — `4K + 127K` 60-item task confirmation (`8`-pass `Amendment 3B.2` extension) | **In Progress** | CuteAFD `v6.0.0` | `~6.65 h` done + `~11.4 h` ext | `~11.4 h` remaining | 4-pass anchor stop (`+3.75 pp`, CI `[−0.05, +7.71]`; unfinished `16→6/240`, CI `[−7.92, −0.42]`); extending anchors + `k345-b1b2` to 8 passes (`Z ≥ 1.96` inverse-normal); `k325-iso-hot` dropped from task runs |
-| **Phase 4** — Cross-engine carry-over | Planned (gated) | vLLM fork `v0.9.2` | `~6.5–8 h` | `~6.5–8 h` | Tasks, `tool-eval-bench`, speed, and KV pool |
+| **Phase 3B** — `4K + 127K` 60-item task confirmation (`8`-pass `Amendment 3B.2`) | **FAIL (`L3.3` on `K3.45-B1B2`)** | CuteAFD `v6.0.0` | `18.36 h` | Done (`18.36 h`) | Anchor gap detected (`Z_acc = 2.33`, `+3.70 pp`; `Z_unf = 2.81`, `35→15/480`); **`K3.45-B1B2` failed `L3.3`** (`86.90%`, `−0.26 pp` vs native, `31/480` unf, `−3.96 pp` vs K4 `CI [−6.74, −1.12]`) |
+| **Phase 4** — Cross-engine carry-over | **Blocked (`L3.3` FAIL)** | vLLM fork `v0.9.2` | `0 h` | Blocked | Gate held: `K3.45-B1B2` did not advance |
 
 ---
 
