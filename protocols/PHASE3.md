@@ -14,9 +14,9 @@
 
 ---
 
-## 1. Stage 3A — Held-Out Continuous Gate & Neutral-Author Check (`~2.7` wall-h, `score` mode)
+## 1. Stage 3A — Held-Out Continuous Gate & Neutral-Author Check (`score` mode)
 
-Runs three strictly held-out / neutral evaluations before spending long generation hours in Stage 3B:
+Runs three strictly held-out / neutral evaluations before launching Stage 3B generation runs:
 
 1. **Untouched P-A Teacher Panel (`51,175` rows across `25` clusters, NEVER used in Phase 2):**
    - Run on `K3.45-B1B2`, `K3.35-B2`, and `K3.25-iso-hot` and paired directly against Phase 1's untouched `k325-native`, `k325-rebuilt`, and `k4-bf16core` P-A receipts.
@@ -40,14 +40,13 @@ Runs three strictly held-out / neutral evaluations before spending long generati
 - **`L3.2` (Untouched `D_margin_heldout` `n = 36` + Independent-Quantizer `D_margin_neutral` `n = 24`):**
   - Report paired bootstrap 95% CIs (`10,000` resamples, seed `20261123`) for `B_close` vs BOTH `k325-rebuilt` and `k325-native` on both `D_margin_heldout` (`n = 36`) and `D_margin_neutral` (`n = 24`), plus the neutral-author `k4-bf16core − k325-rebuilt` validity check.
 - **Stage 3A → Stage 3B Advancement Rule:**
-  - Advance into Stage 3B: **`k325-native`** (deployment baseline) + **`k4-bf16core`** (upper anchor) + **`K3.45-B1B2`** (if it passes `L3.1`) + **`K3.35-B2`** and/or **`K3.25-iso-hot`** if they pass `L3.1` (capped at 3–4 total Stage 3B arms = `~9–12` wall-h).
+  - Advance into Stage 3B: **`k325-native`** (deployment baseline) + **`k4-bf16core`** (upper anchor) + **`K3.45-B1B2`** (if it passes `L3.1`) + **`K3.35-B2`** and/or **`K3.25-iso-hot`** if they pass `L3.1` (capped at 3–4 total Stage 3B arms).
 
 ---
 
-## 2. Stage 3B — 4K + 127K Context-Probe Task Confirmation (`~9–12` wall-h, `serve` mode, gated on Stage 3A)
+## 2. Stage 3B — 4K + 127K Context-Probe Task Confirmation (`serve` mode, gated on Stage 3A)
 
 - **Suite:** Full 60-item measured Context-Probe (`20 join`, `20 ledger`, `20 trace`) at **both `4K` and `128K` (`127K` content)**, **`4` passes (`single-rep0..rep3`)**, concurrency `8`, **`max_tokens = 32,768`** (strictly below CuteAFD's `65,536` RepeatGuard shingle cap), temperature `1.0`, `top_p = 0.95`.
-- **Measured runtime on CuteAFD `v6.0.0`:** `~47 min / rep` → `~3.1 wall-h / arm` for 4 passes (`~9.3–12.4 wall-h` for 3–4 arms).
 - **Primary 127K endpoint & anchor-gap prerequisite (`Amendment 3A.1`):**
   - **Primary 127K endpoint:** Overall 127K accuracy (`mean_score` across `60 items × 4 passes = 240` replies; paired 95% CI half-width `~±3.5–4.0 pp`), with **unfinished-reply rate (`(cap + repetition) / 240`)** as co-primary diagnostic.
   - **Anchor-gap prerequisite:** Prior `−5.73 pp` separation came from the CuteAFD `v5.0.0` `k325-fp8c` graft; `k4-bf16core − k325-native` has not yet been measured on CuteAFD `v6.0.0` with BF16/F32 core. Therefore, **first evaluate `G_anchor = score_127k(k4-bf16core) − score_127k(k325-native)`**. If `G_anchor`'s 95% CI includes `0` at 4 passes, report `"127K anchor gap not reproduced on CuteAFD v6.0.0 / BF16-core at 4 passes (MDE ±3.5–4.0 pp)"` with **no candidate task ranking** (extending to 8 passes only if point `G_anchor ≥ +2.5 pp`).
@@ -57,7 +56,7 @@ Runs three strictly held-out / neutral evaluations before spending long generati
     2. 4K accuracy shows no detected regression (`Δ4K ≥ −1.5 pp` or 95% CI includes `0`),
     3. Candidate recovers **`≥ 50%`** of `G_anchor` on 127K overall accuracy (**reported with paired item-cluster bootstrap 95% CI**), **OR** recovers **`≥ 50%`** of `k4-bf16core`'s 127K unfinished-reply reduction **ONLY IF `k4-bf16core`'s own paired unfinished-rate reduction vs `k325-native` is itself detected (95% CI excluding `0`)** (preventing tiny integer-count ratios like `1/2` from triggering advancement; also reported with bootstrap 95% CI), without regressing finished-only accuracy.
   - **Arm-level vs item-level `B_close` note (`Amendment 3B.1`):** Because per-item `B_close` correlates weakly across trajectory authors (`r ≈ 0.23`), the end-of-thinking link to Stage 3B unfinished replies is evaluated at the **arm level**; any per-item `B_close` correlation is labeled exploratory.
-  - **Optional post-3B authorship check (`Amendment 3B.1`):** `probe_neutral/manifest.json` already contains `36` untouched neutral held-out items (`35 exlr8-k4 + 1 k325-fp8c`); scoring them after Stage 3B (`~1.5–2 wall-h`) cleanly separates item-set vs self-authorship on `B1`'s held-out `B_close` lift without affecting any Stage 3B gate.
+  - **Optional post-3B authorship check (`Amendment 3B.1`):** `probe_neutral/manifest.json` already contains `36` untouched neutral held-out items (`35 exlr8-k4 + 1 k325-fp8c`); scoring them after Stage 3B cleanly separates item-set vs self-authorship on `B1`'s held-out `B_close` lift without affecting any Stage 3B gate.
 
 ### Pre-Data `Amendment 3B.2` (`2026-11-24`, recorded after 4-pass anchor stop and BEFORE `rep 4`)
 At the 4-pass anchor checkpoint (`k325-native`: `87.81%`, `16/240` unfinished; `k4-bf16core`: `91.56%`, `6/240` unfinished), `G_anchor = +3.75 pp` (`95% CI [−0.05, +7.71]`) missed `> 0` by `0.05 pp` while clearing the pre-registered `≥ +2.5 pp` 8-pass extension trigger, and co-primary unfinished-rate reduction was already detected (`−4.17 pp`, `95% CI [−7.92, −0.42]`, `16/16` and `6/6` ending inside thinking with `content_chars = 0`). Before running `rep 4`, we freeze the 8-pass statistical test, candidate scope, and deterministic failure-mode classifier:
@@ -67,9 +66,9 @@ At the 4-pass anchor checkpoint (`k325-native`: `87.81%`, `16/240` unfinished; `
    - Primary detection criterion (exact one-sided `α = 0.025`, preserving Type I error despite the interim-triggered extension): **`Z = (z1 + z2) / √2 ≥ 1.96`** (requires `z2 ≥ +0.8760` for accuracy; `z2_unf ≥ +0.5508` for unfinished rate). Report pooled 8-pass bootstrap 95% CIs (`~±3.0 pp` half-width given dominant within-item variance) as descriptive lines.
 2. **Candidate scope (`k345-b1b2` at 8 passes; `k325-iso-hot` dropped from Stage 3B task runs):**
    - Drop `k325-iso-hot` from Stage 3B task runs (`~24%` P-A KL headroom implies `~0.9 pp` expected task lift, unresolvable at affordable pass counts; its verified zero-byte result stands on P-A, P-B, and `B_close`).
-   - Run **`k345-b1b2`** (`128K` `rep 0–7` + `4K` `rep 0–3`, `~6.0 wall-h`) **unconditionally** after anchors `rep 4–7` (`~5.4 wall-h`, total `~11.4 wall-h`), declared before `rep 4`:
+   - Run **`k345-b1b2`** (`128K` `rep 0–7` + `4K` `rep 0–3`) **unconditionally** after anchors `rep 4–7`, declared before `rep 4`:
      - If 8-pass accuracy `G_anchor` is detected (`Z ≥ 1.96`), evaluate `L3.3` on `k345-b1b2` via `tools/analyze_phase3b_8pass.py` (point recovery share + bootstrap 95% CI, ranking language only if `k345 − native` CI excludes `0`).
      - If 8-pass accuracy `G_anchor` stays undetected (`Z < 1.96`), report `k345-b1b2`'s unfinished/runaway-listing rate against both anchors descriptively with no `L3.3` accuracy verdict.
 3. **Frozen deterministic unfinished-tail classifier & length quantiles:**
    - Every unfinished 128K reply (`finish_class != "stop"`) is classified deterministically from the final `20,000` chars of its reasoning trace: `record_list` if `≥ 70%` of non-empty lines match a record-line pattern (`courier|parcel|hub|shipment|packet|depot|route`, numbered list item, `^\d{4,5}\s+[A-Z0-9-]{3,}`, or record ID token); else `line_repeat` if any identical line repeats `≥ 10` times; else `computation`. Also report finished-reply token/char quantiles (`p25/p50/p75/p90`) and keep all three task families (`join`, `ledger`, `trace`) pooled (descriptive family split only).
-4. **Post-3B check:** Run the untouched `exlr8-k4` `n = 36` held-out `B_close` check (`~1.8 wall-h`) after `k345-b1b2` completes.
+4. **Post-3B check:** Run the untouched `exlr8-k4` `n = 36` held-out `B_close` check after `k345-b1b2` completes.

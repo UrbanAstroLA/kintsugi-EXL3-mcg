@@ -54,7 +54,7 @@
    Point estimate is consistent with Phase 1 on independent trajectories (**`+0.2517` `[−0.0276, +0.5603]`** on `exlr8-k4` vs **`+0.2773` `[+0.0197, +0.5381]`** on K4-authored Phase 1), arguing against a large self-authorship inflation, though the pre-registered matched-control contrast is **not detected at `n = 24`** (detected vs native: `+0.2705` `[+0.0643, +0.4680]`). Excluding the single K3.25-authored fallback (`ledger-118`, `exlr8-k4`-only `n = 23`) leaves the result unchanged: `k4 − rebuilt = +0.2296` `[−0.0583, +0.5475]`, `k4 − native = +0.2661` `[+0.0490, +0.4740]`.
 2. **`B2` vs `B1` authorship split (`D_margin_heldout` vs `D_margin_neutral`):**
    - `B2` alone (`k335-b2 − rebuilt`) replicates across authorship: **`+0.1610` `[+0.0048, +0.3264]`** (K4-authored `n=36`) and **`+0.1764` `[+0.0378, +0.3257]`** (`exlr8-k4` `n=24`, sole candidate detected vs matched control on neutral items).
-   - What `B1` adds (`k345-b1b2 − k335-b2`) is large on K4-authored `D_margin_heldout` (**`+0.3170` `[+0.1285, +0.5356]`**, bringing `k345` to `80.2%` `[44%, 128%]` of K4's lift, with direct `k4 − k345 = +0.1179` `[−0.1399, +0.3547]` not detected), but near zero on `exlr8-k4` `D_margin_neutral` (**`+0.0104` `[−0.1379, +0.1786]`**; `k4 − k345 = +0.0649` `[−0.0993, +0.2260]`). Because the two splits use different item sets, separating item-set from authorship requires scoring `probe_neutral`'s untouched 36-item held-out split (`35 exlr8-k4 + 1 k325-fp8c`, `~1.5–2 wall-h`), noted as a pre-registered optional post-3B check.
+   - What `B1` adds (`k345-b1b2 − k335-b2`) is large on K4-authored `D_margin_heldout` (**`+0.3170` `[+0.1285, +0.5356]`**, bringing `k345` to `80.2%` `[44%, 128%]` of K4's lift, with direct `k4 − k345 = +0.1179` `[−0.1399, +0.3547]` not detected), but near zero on `exlr8-k4` `D_margin_neutral` (**`+0.0104` `[−0.1379, +0.1786]`**; `k4 − k345 = +0.0649` `[−0.0993, +0.2260]`). Because the two splits use different item sets, separating item-set from authorship requires scoring `probe_neutral`'s untouched 36-item held-out split (`35 exlr8-k4 + 1 k325-fp8c`), noted as a pre-registered optional post-3B check.
 3. **Stage 2B `K3.25-iso-hot` watch item cleared:** The negative build-set point estimate (`−0.1720`) did not reappear on either `D_margin_heldout` (`+0.0542` vs rebuilt, `+0.1369` vs native) or `D_margin_neutral` (`+0.0474` / `+0.0661`).
 
 ---
@@ -62,7 +62,7 @@
 ## 3. Stage 3B Arm Selection (`4` Arms, Anchor-Gap Early-Stop Gate)
 
 Per `protocols/PHASE3.md` (`Amendment 3A.1` & `Amendment 3B.1`, max 4 Stage 3B arms on 60-item `4K + 127K` Context-Probe × 4 passes, `max_tokens = 32,768`, CuteAFD `v6.0.0` BF16/F32 core):
-1. **`k325-native`** (published deployment baseline, `~3.1 wall-h`)
-2. **`k4-bf16core`** (upper anchor, `~3.1 wall-h`) → **Automated `G_anchor` prerequisite check after Arm 2 (`~6.2 h`)**; stops cleanly if `G_anchor` 95% CI includes `0` at 4 passes.
-3. **`k345-b1b2`** (`+7.59 GiB`, `3.4535 bpw` — **Primary deployment candidate**: `51.2%–52.8%` untouched P-A KL, `80.2%` `[44%, 128%]` K4-authored held-out `B_close`, `~3.1 wall-h`)
-4. **`k325-iso-hot`** (`0 B` delta, `3.2442 bpw` — **Zero-byte iso-bitrate finalist**: `22.0%–23.7%` untouched P-A KL detected against both controls at zero extra bytes, `~3.1 wall-h`)
+1. **`k325-native`** (published deployment baseline)
+2. **`k4-bf16core`** (upper anchor) → **Automated `G_anchor` prerequisite check after Arm 2**; stops cleanly if `G_anchor` 95% CI includes `0` at 4 passes.
+3. **`k345-b1b2`** (`+7.59 GiB`, `3.4535 bpw` — **Primary deployment candidate**: `51.2%–52.8%` untouched P-A KL, `80.2%` `[44%, 128%]` K4-authored held-out `B_close`)
+4. **`k325-iso-hot`** (`0 B` delta, `3.2442 bpw` — **Zero-byte iso-bitrate finalist**: `22.0%–23.7%` untouched P-A KL detected against both controls at zero extra bytes)

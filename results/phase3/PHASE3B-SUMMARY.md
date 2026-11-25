@@ -1,6 +1,6 @@
 # Phase 3 Stage 3B Summary — 127K Task Confirmation (`L3.3`: Not Met on `K3.45-B1B2`; Halves Disagree)
 
-**Status:** Complete (`2026-11-25`) | **Engine:** CuteAFD `v6.0.0` (`sha256:f2bd29c7...`, BF16/F32 dense core, `max_tokens = 32,768`, concurrency `8`, `4.96M` KV pool) | **Wall time:** `18.36 h` (`6.65 h` Stage 1 4-pass anchors + `11.71 h` Stage 2 extension; `~36.7` card GPU-h) | **Protocol:** [`protocols/PHASE3.md`](../../protocols/PHASE3.md) (`Amendment 3A.1`, `3B.1`, `3B.2`)
+**Status:** Complete (`2026-11-25`) | **Engine:** CuteAFD `v6.0.0` (`sha256:f2bd29c7...`, BF16/F32 dense core, `max_tokens = 32,768`, concurrency `8`, `4.96M` KV pool) | **Protocol:** [`protocols/PHASE3.md`](../../protocols/PHASE3.md) (`Amendment 3A.1`, `3B.1`, `3B.2`)
 
 ---
 

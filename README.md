@@ -27,7 +27,7 @@ A complete `K ∈ {3, 4}` MCG EXL3 fit library (`mcg_multiplier = 3417055213`, i
 
 | Path | Purpose |
 |---|---|
-| [`docs/PLAN.md`](docs/PLAN.md) | Staged, decision-driven experimental plan (Phases 0–4) with ETAs, power statements, and go/no-go gates |
+| [`docs/PLAN.md`](docs/PLAN.md) | Staged, decision-driven experimental plan (Phases 0–4) with power statements and go/no-go gates |
 | [`docs/BASELINES.md`](docs/BASELINES.md) | Published baseline numbers from `cuteafd-eval` and `local-inference-evals` |
 | [`docs/PHASE0-INVENTORY.md`](docs/PHASE0-INVENTORY.md) | Zero-GPU checkpoint audit, byte-identity checks, and loader contract verification |
 | [`results/phase0/PHASE0-SUMMARY.md`](results/phase0/PHASE0-SUMMARY.md) | Verified Phase 0 stitcher (`L0.1–L0.2`) and CuteAFD `v6.0.0` CPU planner (`L0.3`) receipts |
@@ -48,15 +48,15 @@ A complete `K ∈ {3, 4}` MCG EXL3 fit library (`mcg_multiplier = 3417055213`, i
 
 ## Current Status
 
-| Phase | Status | Engine | GPU Time | Wall ETA | Key Outcome |
-|---|---|---|---|---|---|
-| **Phase 0** — Stitcher & planner verification | **PASS (`L0.1–L0.3`)** | CPU / CuteAFD `v6.0.0` planner | `0 h` | Done (`~6 min`) | `0` header/SHA mismatches; 4/4 `READY to serve`; `27–36 s` per incremental 6-layer band flip |
-| **Phase 1** — Determinism, library offset & two-component margin probe | **PASS (`L1.1–L1.3`)** | CuteAFD `v6.0.0` | `~1.7 h` | Done (`~2.0 h`) | Exact `0.0` restart spread; `B_close` (`</think>`) `+0.277` nat K4 vs K3.25 (`+0.731` vs K3, `23/24`); `A_min` retired; `\|ΔKL_PB\| = 0.0006` |
-| **Phase 2A** — Coarse 7-band damage map (`14` flips) | **PASS (`L2.1-v2`)** | CuteAFD `v6.0.0` | `~3.8 h` | Done (`3.8 h`) | **`4.31×` P-B KL spread (`4.5σ`)**, `ρ_up_down_KL = +0.68`; **`B1–B2 (L09–L20)` carry `55.8%` of P-B KL headroom** (`≤ 14.4K`; `B_close` confirmatory pending 2B shuffles) |
-| **Phase 2B** — Null controls, role splits, routing-targeted & iso-bitrate (`10` flips) | **PASS (`L2.3`)** | CuteAFD `v6.0.0` | `~2.9 h` | Done (`2.9 h`) | `K3.45-B1B2` (`50.2%` KL headroom in `27.7%` bytes), `K3.35-B2` (`36.0%`, `1.44×` KL/GiB), `K3.25-iso-hot` (`16.3%` at `0 B`, CI `< 0`); shuffle KL `~0` |
-| **Phase 3A** — Held-out continuous gate (P-A, `D_margin_heldout`, `exlr8-k4` neutral) | **PASS (`L3.1–L3.2`)** | CuteAFD `v6.0.0` | `~2.9 h` | Done (`2.9 h`) | `K3.45-B1B2`: `52.8%` P-A KL, `80.2%` `[44%, 128%]` K4-authored held-out `B_close`; `K3.25-iso-hot`: `23.7%` P-A KL at `0 B` (`CI < 0`); `exlr8-k4` neutral `+0.252` vs rebuilt (not detected at `n=24`), `+0.271` vs native (`CI > 0`) |
-| **Phase 3B** — `4K + 127K` 60-item task confirmation (`8`-pass `Amendment 3B.2`) | **FAIL (`L3.3`; halves disagree)** | CuteAFD `v6.0.0` | `18.36 h` | Done (`18.36 h`) | Anchor gap detected (`Z_acc = 2.33`, `+3.70 pp`; `Z_unf = 2.81`, `35→15/480`); `K3.45-B1B2` `L3.3` FAIL (`86.90%` pooled, `31/480` unf), but halves disagree (`23` vs `8` unf, `p = 0.008`) — unresolved pending Stage 3C |
-| **Phase 4** — Cross-engine carry-over | **Blocked (`L3.3` FAIL)** | vLLM fork `v0.9.2` | `0 h` | Blocked | Gate held: `K3.45-B1B2` did not advance |
+| Phase | Status | Engine | Key Outcome |
+|---|---|---|---|
+| **Phase 0** — Stitcher & planner verification | **PASS (`L0.1–L0.3`)** | CPU / CuteAFD `v6.0.0` planner | `0` header/SHA mismatches; 4/4 `READY to serve`; `27–36 s` per incremental 6-layer band flip |
+| **Phase 1** — Determinism, library offset & two-component margin probe | **PASS (`L1.1–L1.3`)** | CuteAFD `v6.0.0` | Exact `0.0` restart spread; `B_close` (`</think>`) `+0.277` nat K4 vs K3.25 (`+0.731` vs K3, `23/24`); `A_min` retired; `\|ΔKL_PB\| = 0.0006` |
+| **Phase 2A** — Coarse 7-band damage map (`14` flips) | **PASS (`L2.1-v2`)** | CuteAFD `v6.0.0` | **`4.31×` P-B KL spread (`4.5σ`)**, `ρ_up_down_KL = +0.68`; **`B1–B2 (L09–L20)` carry `55.8%` of P-B KL headroom** (`≤ 14.4K`; `B_close` confirmatory pending 2B shuffles) |
+| **Phase 2B** — Null controls, role splits, routing-targeted & iso-bitrate (`10` flips) | **PASS (`L2.3`)** | CuteAFD `v6.0.0` | `K3.45-B1B2` (`50.2%` KL headroom in `27.7%` bytes), `K3.35-B2` (`36.0%`, `1.44×` KL/GiB), `K3.25-iso-hot` (`16.3%` at `0 B`, CI `< 0`); shuffle KL `~0` |
+| **Phase 3A** — Held-out continuous gate (P-A, `D_margin_heldout`, `exlr8-k4` neutral) | **PASS (`L3.1–L3.2`)** | CuteAFD `v6.0.0` | `K3.45-B1B2`: `52.8%` P-A KL, `80.2%` `[44%, 128%]` K4-authored held-out `B_close`; `K3.25-iso-hot`: `23.7%` P-A KL at `0 B` (`CI < 0`); `exlr8-k4` neutral `+0.252` vs rebuilt (not detected at `n=24`), `+0.271` vs native (`CI > 0`) |
+| **Phase 3B** — `4K + 127K` 60-item task confirmation (`8`-pass `Amendment 3B.2`) | **FAIL (`L3.3`; halves disagree)** | CuteAFD `v6.0.0` | Anchor gap detected (`Z_acc = 2.33`, `+3.70 pp`; `Z_unf = 2.81`, `35→15/480`); `K3.45-B1B2` `L3.3` FAIL (`86.90%` pooled, `31/480` unf), but halves disagree (`23` vs `8` unf, `p = 0.008`) — unresolved pending Stage 3C |
+| **Phase 4** — Cross-engine carry-over | **Blocked (`L3.3` FAIL)** | vLLM fork `v0.9.2` | Gate held: `K3.45-B1B2` did not advance |
 
 ---
 

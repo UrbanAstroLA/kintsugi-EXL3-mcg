@@ -10,7 +10,7 @@
 
 ---
 
-## 1. Stage 2B Flip Matrix (`10` flips, ETA `~2.7` wall-h)
+## 1. Stage 2B Flip Matrix (`10` flips)
 
 All 10 allocation maps are generated deterministically by [`tools/make_stage2b_maps.py`](../tools/make_stage2b_maps.py) before launch and stitched incrementally via `tools/stitch_exl3.py --reuse-from k325-rebuilt`. Every flip runs the identical frozen `D_margin_build` (`n = 24`) inline probe + full `32,768`-row P-B fidelity evaluation (`validate_pb.py` `0` mismatches required) + rolling cleanup of temporary shards and dumps.
 

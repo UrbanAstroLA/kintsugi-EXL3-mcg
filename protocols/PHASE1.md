@@ -32,8 +32,6 @@
 
 ---
 
-## 3. Budget & Gates
+## 3. Gates & Kill / Pivot Rules
 
-- **Estimated GPU time:** `~1.5–1.8 GPU-h` (~15–20 min per launch across 5 launches).
-- **Estimated wall time:** `~2.0 h` (including CPU builds of `k4-bf16core` and `k3-bf16core`, ~5 min).
-- **Kill / Pivot rule:** If `L1.1` fails (non-deterministic prefill margins), stop and diagnose engine determinism. If neither Component A nor Component B passes `L1.2`, revise the probe before spending Phase 2 GPU hours. If `L1.3` exceeds `0.003` nats, inspect `k325-rebuilt − k325-native` before interpreting Phase 2 flips.
+- **Kill / Pivot rule:** If `L1.1` fails (non-deterministic prefill margins), stop and diagnose engine determinism. If neither Component A nor Component B passes `L1.2`, revise the probe before starting Phase 2. If `L1.3` exceeds `0.003` nats, inspect `k325-rebuilt − k325-native` before interpreting Phase 2 flips.

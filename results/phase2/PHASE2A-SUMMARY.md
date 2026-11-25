@@ -73,7 +73,7 @@ Comparing the empirical Stage 2A P-B sensitivity map (`≤ 14.4K` tokens) agains
 
 ---
 
-## 4. Next Step — Stage 2B (`protocols/PHASE2B.md`, `10` flips, ETA `~2.7` wall-h)
+## 4. Next Step — Stage 2B (`protocols/PHASE2B.md`, `10` flips)
 
 Stage 2A advances directly to **Stage 2B** (frozen before first Stage 2B GPU request):
 - **2 within-band iso-bitrate shuffle null controls** (`null-shuf-b2`, `null-shuf-b5`, per `Amendment 2A.1`),

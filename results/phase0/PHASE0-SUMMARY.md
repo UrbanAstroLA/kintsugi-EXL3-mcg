@@ -1,6 +1,6 @@
 # Phase 0 Results: Stitcher Verification & CuteAFD `v6.0.0` CPU Planner (`2026-11-23`)
 
-**Zero GPU time used.** All checks ran on CPU + NVMe using [`tools/stitch_exl3.py`](../../tools/stitch_exl3.py) and `ghcr.io/tpurtell/cuteafd-coordinator:v6.0.0@sha256:f2bd29c76f8810e078eff0e1aed390427908fae944932cc6ca7dfb98071fa415` (`cuteafd plan --layout --rtx 2 --spark-ranks 0`).
+**CPU-only verification (no GPU runs).** All checks ran on CPU + NVMe using [`tools/stitch_exl3.py`](../../tools/stitch_exl3.py) and `ghcr.io/tpurtell/cuteafd-coordinator:v6.0.0@sha256:f2bd29c76f8810e078eff0e1aed390427908fae944932cc6ca7dfb98071fa415` (`cuteafd plan --layout --rtx 2 --spark-ranks 0`).
 
 ## 1. Stitcher & Integrity Checks (`L0.1`, `L0.2`)
 
@@ -22,4 +22,4 @@
 | `test-b0-k4` (`L03–08` 100% K4) | **READY to serve** | `glmf:exl3-k34` | `CheckpointPrecision` (`bf16 x519, f32 x68`; `Unchanged`) | `73,310` / `72,612 MiB` | `5,592,064` |
 | `test-b0-k3` (`L03–08` 0% K4) | **READY to serve** | `glmf:exl3-k34` | `CheckpointPrecision` (`bf16 x519, f32 x68`; `Unchanged`) | `70,718` / `70,020 MiB` | `6,481,920` |
 
-**Gate P0 outcome:** **PASS (`L0.1`, `L0.2`, `L0.3` all met).** Ready to draft and freeze `protocols/PHASE1.md` pending operator approval for Phase 1 GPU time (`~1.5–1.8 GPU-h`).
+**Gate P0 outcome:** **PASS (`L0.1`, `L0.2`, `L0.3` all met).** Ready to draft and freeze `protocols/PHASE1.md` pending operator approval for Phase 1.
