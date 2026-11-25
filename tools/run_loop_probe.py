@@ -4,13 +4,16 @@ Run the frozen Stage 3C-A Loop Entry/Exit Margin Probe (`probe_loop/manifest.jso
 against a running CuteAFD v6.0.0 score-mode server via `/v1/bench/probe`.
 
 For every cut position (`enter`, `exit_5`, `exit_10`, `exit_20`, and `leave` on
-controls), records BOTH:
+controls), records:
+  - `m_class`: logsumexp(logp(record_start_tokens in pool))
+               - logsumexp(logp(non_record_tokens in pool))
+               (primary symmetric class log-odds over pool = top_k=10 U want).
+  - `m_stick`: logsumexp(logp(record_start_tokens in pool))
+               - max(logp(non_record_tokens in pool))
+               (secondary max-exit variant).
   - `m_raw`:   logp(trajectory_next_token) - max(logp(other token in top_5))
-               (exact same formula as `B_close`).
-  - `m_stick`: logsumexp(logp(record_start_tokens in top_k U want))
-               - max(logp(non_record_tokens in top_k U want))
-               (solves multi-token record-start competition such as `cour`/`parcel`/`hub`
-               on `join` or multi-digit starts on `ledger`).
+               (secondary single-token formula matching `B_close`).
+  - `pool_mass`: exp(logsumexp(logp(all tokens in pool))) coverage diagnostic.
 And at each newline boundary `pos - 1` (`nl_cuts`), records:
   - `m_nl`:    logp('\n' [198]) - logp('\n\n' [271]).
 """
@@ -112,6 +115,10 @@ def compute_cut_metrics(row: dict, target_id: int, family: str, tok) -> dict:
 
     rec_lps = [lp for tid, lp in pool.items() if is_record_start_token(family, tid, tok)]
     non_rec_lps = [lp for tid, lp in pool.items() if not is_record_start_token(family, tid, tok)]
+    all_lps = list(pool.values())
+    pool_log_mass = logsumexp(all_lps) if all_lps else None
+    pool_mass = min(1.0, math.exp(pool_log_mass)) if pool_log_mass is not None else None
+    m_class = (logsumexp(rec_lps) - logsumexp(non_rec_lps)) if (rec_lps and non_rec_lps) else None
     m_stick = (logsumexp(rec_lps) - max(non_rec_lps)) if (rec_lps and non_rec_lps) else None
 
     top1_tid = int(row["argmax"])
@@ -123,8 +130,11 @@ def compute_cut_metrics(row: dict, target_id: int, family: str, tok) -> dict:
         "top1_match": top1_tid == target_id,
         "lp_target": round(lp_target, 6),
         "lp_best_other5": round(lp_best_other5, 6),
-        "m_raw": round(m_raw, 6),
+        "m_class": round(m_class, 6) if m_class is not None else None,
         "m_stick": round(m_stick, 6) if m_stick is not None else None,
+        "m_raw": round(m_raw, 6),
+        "pool_mass": round(pool_mass, 6) if pool_mass is not None else None,
+        "pool_log_mass": round(pool_log_mass, 6) if pool_log_mass is not None else None,
         "top5": [[tid, round(lp, 5)] for tid, lp in top5],
         "hash": row.get("hash", ""),
         "finite": bool(row.get("finite", True)),
@@ -205,7 +215,7 @@ def main() -> None:
             e10 = res["cuts"].get("exit_10", {})
             print(
                 f"[{idx:03d}/{len(items_meta):03d}] {pid:40s} CACHED "
-                f"raw10={e10.get('m_raw')} stick10={e10.get('m_stick')}",
+                f"cls10={e10.get('m_class')} stk10={e10.get('m_stick')} raw10={e10.get('m_raw')} cov={e10.get('pool_mass')}",
                 flush=True,
             )
             continue
@@ -240,7 +250,7 @@ def main() -> None:
         e10 = res["cuts"].get("exit_10", {})
         print(
             f"[{idx:03d}/{len(items_meta):03d}] {pid:40s} {dt:5.1f}s "
-            f"raw10={e10.get('m_raw')} stick10={e10.get('m_stick')}",
+            f"cls10={e10.get('m_class')} stk10={e10.get('m_stick')} raw10={e10.get('m_raw')} cov={e10.get('pool_mass')}",
             flush=True,
         )
 

@@ -195,6 +195,27 @@ def dump_minus_control_boot(
     }
 
 
+def pool_coverage_summary(rows: Dict[str, dict], cut: str, kind: str = "dump") -> dict:
+    vals = sorted(
+        float(r["cuts"][cut]["pool_mass"])
+        for r in rows.values()
+        if r["kind"] == kind and cut in r["cuts"] and r["cuts"][cut].get("pool_mass") is not None
+    )
+    if not vals:
+        return {"n": 0}
+    n = len(vals)
+    med = vals[n // 2]
+    p10 = vals[int(0.10 * (n - 1))]
+    return {
+        "n": n,
+        "min": round(vals[0], 6),
+        "p10": round(p10, 6),
+        "median": round(med, 6),
+        "mean": round(sum(vals) / n, 6),
+        "median_below_0_95": bool(med < 0.95),
+    }
+
+
 def run_stage_3ca(args) -> None:
     mdir = Path(args.margins_dir)
     arms = ["k325-native", "k345-b1b2", "k4-bf16core"]
@@ -206,28 +227,43 @@ def run_stage_3ca(args) -> None:
 
     all_pids = sorted(by_arm["k325-native"].keys())
     dump_pids = [pid for pid in all_pids if by_arm["k325-native"][pid]["kind"] == "dump"]
+    non_k345_dump_pids = [pid for pid in dump_pids if by_arm["k325-native"][pid]["author"] != "k345-b1b2"]
+    k4_auth_dump_pids = [pid for pid in dump_pids if by_arm["k325-native"][pid]["author"] == "k4-bf16core"]
     authors = sorted({by_arm["k325-native"][pid]["author"] for pid in dump_pids})
     families = sorted({by_arm["k325-native"][pid]["family"] for pid in dump_pids})
 
     out: dict = {
-        "schema": "kintsugi-phase3c-a-summary-v1",
+        "schema": "kintsugi-phase3c-a-summary-v2",
         "primary_metric": args.primary_metric,
         "primary_cut": "exit_10",
+        "pool_coverage": {
+            arm: {cut: pool_coverage_summary(by_arm[arm], cut, "dump") for cut in ("enter", "exit_5", "exit_10", "exit_20")}
+            for arm in arms
+        },
         "metrics": {},
     }
 
-    for metric in ("m_stick", "m_raw"):
+    for metric in ("m_class", "m_stick", "m_raw"):
         primary_anchor = item_cluster_boot_diff(by_arm["k325-native"], by_arm["k4-bf16core"], "exit_10", metric, dump_pids)
+        k4_auth_anchor = item_cluster_boot_diff(by_arm["k325-native"], by_arm["k4-bf16core"], "exit_10", metric, k4_auth_dump_pids)
         k345_vs_native = item_cluster_boot_diff(by_arm["k325-native"], by_arm["k345-b1b2"], "exit_10", metric, dump_pids)
         k345_vs_k4 = item_cluster_boot_diff(by_arm["k4-bf16core"], by_arm["k345-b1b2"], "exit_10", metric, dump_pids)
-        k345_share = recovery_share_boot(
+        k345_share_non_k345 = recovery_share_boot(
+            by_arm["k325-native"], by_arm["k345-b1b2"], by_arm["k4-bf16core"], "exit_10", metric, non_k345_dump_pids
+        )
+        k345_share_all = recovery_share_boot(
             by_arm["k325-native"], by_arm["k345-b1b2"], by_arm["k4-bf16core"], "exit_10", metric, dump_pids
         )
         by_cut = {
             cut: {
                 "k4_vs_k325": item_cluster_boot_diff(by_arm["k325-native"], by_arm["k4-bf16core"], cut, metric, dump_pids),
                 "k345_vs_k325": item_cluster_boot_diff(by_arm["k325-native"], by_arm["k345-b1b2"], cut, metric, dump_pids),
-                "k345_share": recovery_share_boot(by_arm["k325-native"], by_arm["k345-b1b2"], by_arm["k4-bf16core"], cut, metric, dump_pids),
+                "k345_share_non_k345": recovery_share_boot(
+                    by_arm["k325-native"], by_arm["k345-b1b2"], by_arm["k4-bf16core"], cut, metric, non_k345_dump_pids
+                ),
+                "k345_share_all": recovery_share_boot(
+                    by_arm["k325-native"], by_arm["k345-b1b2"], by_arm["k4-bf16core"], cut, metric, dump_pids
+                ),
             }
             for cut in ("enter", "exit_5", "exit_10", "exit_20")
         }
@@ -263,9 +299,11 @@ def run_stage_3ca(args) -> None:
         }
         out["metrics"][metric] = {
             "primary_anchor_exit10": primary_anchor,
+            "k4_authored_anchor_exit10": k4_auth_anchor,
             "k345_vs_native_exit10": k345_vs_native,
             "k345_vs_k4_exit10": k345_vs_k4,
-            "k345_recovery_share_exit10": k345_share,
+            "k345_recovery_share_non_k345_n44": k345_share_non_k345,
+            "k345_recovery_share_all_n72_self_auth_affected": k345_share_all,
             "by_cut": by_cut,
             "by_author_exit10": by_author,
             "by_family_exit10": by_family,
@@ -273,11 +311,18 @@ def run_stage_3ca(args) -> None:
         }
 
     prim = out["metrics"][args.primary_metric]
+    pooled_ok = bool(prim["primary_anchor_exit10"]["k4_less_sticky_detected"])
+    k4_auth_pt = prim["k4_authored_anchor_exit10"].get("B_minus_A")
+    k4_auth_ok = bool(k4_auth_pt is not None and k4_auth_pt < 0.0)
     out["gate"] = {
         "primary_metric": args.primary_metric,
         "primary_cut": "exit_10",
-        "k4_less_sticky_detected": prim["primary_anchor_exit10"]["k4_less_sticky_detected"],
-        "recorded_k345_prediction": prim["k345_recovery_share_exit10"],
+        "pooled_k4_less_sticky_ci_lt_0": pooled_ok,
+        "k4_authored_n11_point_lt_0": k4_auth_ok,
+        "k4_authored_n11_point": k4_auth_pt,
+        "L3C_1_gate_passed": bool(pooled_ok and k4_auth_ok),
+        "primary_prediction_non_k345_n44": prim["k345_recovery_share_non_k345_n44"],
+        "secondary_prediction_all_n72_self_auth_affected": prim["k345_recovery_share_all_n72_self_auth_affected"],
     }
 
     p_out = Path(args.out)
@@ -409,16 +454,17 @@ def run_stage_3cb(args) -> None:
     if args.prediction_json and Path(args.prediction_json).exists():
         pred = json.loads(Path(args.prediction_json).read_text())
         gate = pred.get("gate", {})
-        rec_pred = gate.get("recorded_k345_prediction", {})
+        rec_pred = gate.get("primary_prediction_non_k345_n44", {})
         ci = rec_pred.get("ci95")
         in_ci = bool(ci and rep_unf_share is not None and ci[0] <= rep_unf_share <= ci[1])
         pred_check = {
             "proxy_primary_metric": gate.get("primary_metric"),
-            "proxy_anchor_gate_passed": gate.get("k4_less_sticky_detected"),
-            "proxy_predicted_k345_share": rec_pred.get("share"),
-            "proxy_predicted_k345_ci95": ci,
+            "proxy_L3C_1_gate_passed": gate.get("L3C_1_gate_passed"),
+            "proxy_primary_prediction_non_k345_share": rec_pred.get("share"),
+            "proxy_primary_prediction_non_k345_ci95": ci,
+            "proxy_secondary_all_authors_share": gate.get("secondary_prediction_all_n72_self_auth_affected", {}).get("share"),
             "replication_unf_recovery_share_vs_8p_anchors": rep_unf_share,
-            "replication_share_within_proxy_ci95": in_ci,
+            "replication_share_within_primary_proxy_ci95": in_ci,
         }
 
     out = {
@@ -448,7 +494,7 @@ def main() -> None:
     ap.add_argument("--stage", choices=("3ca", "3cb"), required=True)
     ap.add_argument("--margins-dir", default="")
     ap.add_argument("--tag", default="r0")
-    ap.add_argument("--primary-metric", choices=("m_stick", "m_raw"), default="m_stick")
+    ap.add_argument("--primary-metric", choices=("m_class", "m_stick", "m_raw"), default="m_class")
     ap.add_argument("--stage3b-tasks-dir", default="")
     ap.add_argument("--stage3c-tasks-dir", default="")
     ap.add_argument("--run-tag", default="p3c")
