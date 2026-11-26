@@ -58,8 +58,9 @@ Following Kintsugi Step 5 (`R1–R6`): every line is written with a date before 
   - Frozen manifest (`112` prefixes: `72` dump + `40` stratified controls across `4` authors; `manifest.json` SHA-256 `42bc1f92...`; median pool coverage `0.99997` at `exit_10`).
   - Primary `M_class(exit_10)` (`n = 72` dumps, paired item-cluster bootstrap): **`k4-bf16core − k325-native = −0.4272` nats (`CI [−0.5685, −0.2673]`, `5.5σ`)** and `k4`-authored dumps (`n = 11`) = **`−0.1461 < 0`** → **PASS**.
   - Prospective `k345-b1b2` prediction committed before Stage 3C-B (`results/phase3/STAGE3CA_PREDICTION.json`): primary non-`k345`-authored (`n = 44`) recovery share **`65.0%` (`CI [25.7%, 98.6%]`)**; all-author (`n = 72`, self-authorship-affected) **`62.7%` (`CI [29.7%, 87.8%]`)**.
-- **L3C.2 (Stage 3C-B `K3.45-B1B2` Mixed-Regime Replication — IN PROGRESS, `reps 8–11`, `4K+128K` mixed, fresh server, `SEED_BASE_3C = 950M`):**
-  - Frozen reading on `128K` unfinished count out of `240`: `≤ 12` → `reps 0–3` were a fluctuation; `≥ 18` → mixed regime interacts with `k345-b1b2`; `13–17` → unresolved. Score Step 1's recorded primary (`n = 44`) recovery-share CI against the replication's unfinished share vs the anchors' 8-pass rates (`35/480` vs `15/480`). `L3.3` = FAIL is not reopened.
+- **L3C.2 (Stage 3C-B `K3.45-B1B2` Mixed-Regime Replication — COMPLETE `[E3.9]`, `reps 8–11`, `4K+128K` mixed, fresh server, `SEED_BASE_3C = 950M`):**
+  - `128K` unfinished count: **`14/240` (`5.83%`; `r8: 5, r9: 3, r10: 3, r11: 3`)**, `128K` accuracy `87.71%` (`fin_only = 93.14%`). Frozen reading: **`unresolved (13–17/240)`** (`L3.3` = FAIL not reopened; pooled 12-rep descriptive `87.17%`, `45/720 = 6.25%` unf).
+  - Step 1 prediction consistency: replication unfinished recovery share (`35.0%` vs 8-pass anchors `35/480` vs `15/480`) fell inside Stage 3C-A's recorded primary (`n = 44`) 95% CI (`[25.7%, 98.6%]`, point `65.0%`). Conditional Step 3 awaits separate authorization.
 
 ---
 
