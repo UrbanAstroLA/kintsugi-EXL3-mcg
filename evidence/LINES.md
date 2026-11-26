@@ -61,13 +61,11 @@ Following Kintsugi Step 5 (`R1–R6`): every line is written with a date before 
 - **L3C.2 (Stage 3C-B `K3.45-B1B2` Mixed-Regime Replication — COMPLETE `[E3.9]`, `reps 8–11`, `4K+128K` mixed, fresh server, `SEED_BASE_3C = 950M`):**
   - `128K` unfinished count: **`14/240` (`5.83%`; `r8: 5, r9: 3, r10: 3, r11: 3`)**, `128K` accuracy `87.71%` (`fin_only = 93.14%`). Frozen reading: **`unresolved (13–17/240)`** (`L3.3` = FAIL not reopened; pooled 12-rep descriptive `87.17%`, `45/720 = 6.25%` unf).
   - Step 1 prediction consistency: replication unfinished recovery share (`35.0%` vs 8-pass anchors `35/480` vs `15/480`) fell inside Stage 3C-A's recorded primary (`n = 44`) 95% CI (`[25.7%, 98.6%]`, point `65.0%`). Conditional Step 3 awaits separate authorization.
-- **L3D.1 (Stage 3D / Step 3A — 7-Band Loop-Exit Scan, FROZEN `2026-11-25`, `protocols/PHASE3D.md`):**
-  - Score matched stitched control `k325-rebuilt` + all 7 upward band flips (`B0..B6 → 100% K4`, `+3.80 GiB` each) on the `72` frozen dump prefixes via unmodified `tools/run_loop_probe.py`.
-  - Pre-registered additivity & selection rules (`tools/analyze_phase3d.py`):
-    - Resolution floor: single-band `SE ~ 0.07–0.08` nats (`~−0.06`/band if uniform → flat scan reads as distributed, not absent).
-    - Additivity: check `(B1 + B2)` vs `(k345-b1b2 − rebuilt)` and `S_7 = sum(B0..B6)` vs `(k4 − rebuilt)` (`±25%` = additive; `< 50%` = non-additive/distributed → complement fallback).
-    - Author-stratum rank check across all 4 authors; Spearman `ρ` vs Stage 2A `≤ 14.4K` P-B KL.
-    - Step 3B candidate rule: advance a new `≤ 3`-band set (distinct from `B1–B2`, preferring `≤ 2` bands) only if `S_7 / Δ_K4 ≥ 0.50`, summed `exit_10` share `≥ 80%`, and both `join` and `ledger` shares `≥ 60%` (separate go-ahead for Step 3B).
+- **L3D.1 (Stage 3D / Step 3A — 7-Band Loop-Exit Scan, STOPPED EARLY after arm #0 `k325-rebuilt` `[E3.10]`):**
+  - Matched stitched control `k325-rebuilt` showed `k325-rebuilt − k325-native = −0.3466` nats (`CI [−0.4817, −0.2182]`) at `exit_10` (`81%` of `k4 − native`), leaving `k4-bf16core − k325-rebuilt = −0.0805` (`CI [−0.1987, +0.0454]`, not detected). Stopped early during `b0-up-k4` rather than dividing 7 band effects by an undetected denominator.
+- **L3E.1 (Stage 3E — Matched-Library Control `k325-rebuilt` 8-Pass 127K Tasks, FROZEN `2026-11-25`, `protocols/PHASE3E.md`):**
+  - Paired 1-to-1 (`reps 0–3` `4K+128K` + `reps 4–7` `128K`-only, `n = 480` 128K replies) via unmodified `run_tasks_dc.py` against `k325-native` (`35/480`), `k4-bf16core` (`15/480`), and `k345-b1b2` (`31/480`).
+  - Frozen reading on `k325-rebuilt` `128K` unfinished count: **`≥ 30/480`** → `k325-rebuilt ≈ native` (K4 task gain is K4-specific; `M_class` offset was library artifact); **`≤ 20/480`** → `k325-rebuilt ≈ K4` (native runaway rate is checkpoint-specific; `k345-b1b2` regressed vs base); **`21–29/480`** → unresolved/intermediate.
 
 ---
 
