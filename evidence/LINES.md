@@ -63,9 +63,10 @@ Following Kintsugi Step 5 (`R1–R6`): every line is written with a date before 
   - Step 1 prediction consistency: replication unfinished recovery share (`35.0%` vs 8-pass anchors `35/480` vs `15/480`) fell inside Stage 3C-A's recorded primary (`n = 44`) 95% CI (`[25.7%, 98.6%]`, point `65.0%`). Conditional Step 3 awaits separate authorization.
 - **L3D.1 (Stage 3D / Step 3A — 7-Band Loop-Exit Scan, STOPPED EARLY after arm #0 `k325-rebuilt` `[E3.10]`):**
   - Matched stitched control `k325-rebuilt` showed `k325-rebuilt − k325-native = −0.3466` nats (`CI [−0.4817, −0.2182]`) at `exit_10` (`81%` of `k4 − native`), leaving `k4-bf16core − k325-rebuilt = −0.0805` (`CI [−0.1987, +0.0454]`, not detected). Stopped early during `b0-up-k4` rather than dividing 7 band effects by an undetected denominator.
-- **L3E.1 (Stage 3E — Matched-Library Control `k325-rebuilt` 8-Pass 127K Tasks, FROZEN `2026-11-25`, `protocols/PHASE3E.md`):**
-  - Paired 1-to-1 (`reps 0–3` `4K+128K` + `reps 4–7` `128K`-only, `n = 480` 128K replies) via unmodified `run_tasks_dc.py` against `k325-native` (`35/480`), `k4-bf16core` (`15/480`), and `k345-b1b2` (`31/480`).
-  - Frozen reading on `k325-rebuilt` `128K` unfinished count: **`≥ 30/480`** → `k325-rebuilt ≈ native` (K4 task gain is K4-specific; `M_class` offset was library artifact); **`≤ 20/480`** → `k325-rebuilt ≈ K4` (native runaway rate is checkpoint-specific; `k345-b1b2` regressed vs base); **`21–29/480`** → unresolved/intermediate.
+- **L3E.1 (Stage 3E — Matched-Library Control `k325-rebuilt` 8-Pass 127K Tasks — COMPLETE `[E3.11]–[E3.12]`, `protocols/PHASE3E.md`):**
+  - `k325-rebuilt` (`reps 0–7`, `n = 480` 128K): **`87.01%`** overall (`fin_only = 92.81%`, **`30/480 = 6.25%` unfinished**, `17+13` halves `p = 0.57`).
+  - **Frozen reading (`≥ 30/480`):** **`k325-rebuilt ≈ k325-native`** (`−0.16 pp` `[−3.72, +3.70]`); **`k4-bf16core − k325-rebuilt = +3.85 pp` (`z = +2.43`, `[+0.70, +6.93]`, DETECTED)** → K4's live 128K task gain is K4-specific and `M_class`'s `−0.347` offset was a library probe artifact.
+  - Matched-library `k345-b1b2 − k325-rebuilt` = `−0.10 pp` overall (`[−3.10, +2.86]`), `+0.21 pp` unf (`[−2.71, +3.12]`), `−0.00 pp` both-finished (`[−1.11, +1.10]`). Detected cross-library stitching penalty on finished 128K replies: `k325-rebuilt − k325-native` both-finished = **`−1.44 pp` (`[−2.76, −0.14]`)**.
 
 ---
 
