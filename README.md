@@ -42,6 +42,7 @@ A complete `K ∈ {3, 4}` MCG EXL3 fit library (`mcg_multiplier = 3417055213`, i
 | [`protocols/PHASE2.md`](protocols/PHASE2.md) | Frozen Phase 2 Stage 2A layer-band scan protocol (with pre-data `Amendment 2A.1`) |
 | [`protocols/PHASE2B.md`](protocols/PHASE2B.md) | Frozen Phase 2 Stage 2B protocol (with pre-data `Amendment 2B.1`) |
 | [`protocols/PHASE3.md`](protocols/PHASE3.md) | Frozen Phase 3 Stage 3A (held-out continuous + neutral-author gate) & Stage 3B (`4K–127K` task confirmation) protocol |
+| [`protocols/PHASE3F.md`](protocols/PHASE3F.md) | Frozen Phase 3 Stage 3F complement graft (`k377-not-b1b2`, `B0 + B3–B6` at K4) localized-vs-diffuse test protocol |
 | [`evidence/LINES.md`](evidence/LINES.md) | Pre-registered decision lines per phase |
 | [`evidence/EVIDENCE.md`](evidence/EVIDENCE.md) | Numbered evidence rows traced to artifacts |
 | [`tools/stitch_exl3.py`](tools/stitch_exl3.py) | Zero-dependency per-layer EXL3-MCG checkpoint stitcher and SHA-256 verifier |
@@ -60,7 +61,8 @@ A complete `K ∈ {3, 4}` MCG EXL3 fit library (`mcg_multiplier = 3417055213`, i
 | **Phase 3B** — `4K + 127K` 60-item task confirmation (`8`-pass `Amendment 3B.2`) | **FAIL (`L3.3`; halves disagree)** | CuteAFD `v6.0.0` | Anchor gap detected (`Z_acc = 2.33`, `+3.70 pp`; `Z_unf = 2.81`, `35→15/480`); `K3.45-B1B2` `L3.3` FAIL (`86.90%` pooled, `31/480` unf), halves disagreed (`23` vs `8` unf, `p = 0.008`) |
 | **Phase 3C** — Loop entry/exit margin probe (`L3C.1`) & `K3.45-B1B2` replication (`L3C.2`) | **3C-A PASS / 3C-B `14/240`** | CuteAFD `v6.0.0` | `M_class(exit_10)` separates anchors at `5.5σ` (`−0.427` nats, `k4`-auth `−0.146 < 0`; `k345` captures `82%` on `join`, `0%` on `ledger`); `reps 8–11` `14/240` unf (`87.71%`, `35%` share inside Step 1 CI `[25.7%, 98.6%]`; pooled 12p `45/720 = 6.25%`) |
 | **Phase 3D** — 7-band loop-exit scan (`k325-rebuilt` + `B0..B6`, `L3D.1`) | **Stopped Early (`[E3.10]`)** | CuteAFD `v6.0.0` | Arm #0 `k325-rebuilt − k325-native = −0.347` nats (`81%` of `K4 − native`), leaving `K4 − rebuilt = −0.081` (not detected at `exit_10`); stopped during `B0` |
-| **Phase 3E** — Matched-library control `k325-rebuilt` 8-pass `127K` tasks (`L3E.1`) | **Complete (`30/480` unf)** | CuteAFD `v6.0.0` | `k325-rebuilt` `87.01%` (`30/480` unf, `p=0.57` halves) ≈ `k325-native` (`35/480`); **`K4 − rebuilt = +3.85 pp` (`[+0.70, +6.93]`)** confirms K4-specific task gain; **`k345 − rebuilt = −0.10 pp`** (zero B1–B2 gain); **`−1.44 pp` (`[−2.76, −0.14]`)** both-finished cross-library stitching penalty |
+| **Phase 3E** — Matched-library control `k325-rebuilt` 8-pass `127K` tasks (`L3E.1`) | **Complete (`30/480` unf)** | CuteAFD `v6.0.0` | `k325-rebuilt` `87.01%` (`30/480` unf, `p=0.57` halves) ≈ `k325-native` (`35/480`); **`K4 − rebuilt = +3.85 pp` (`[+0.70, +6.93]`)** supports K4-specific task gain; **`k345 − rebuilt = −0.10 pp`** (no detected B1–B2 gain); **`−1.44 pp` (`[−2.76, −0.14]`)** both-finished cross-library stitching penalty |
+| **Phase 3F** — Complement graft `k377-not-b1b2` 8-pass `join+ledger` `127K` (`L3F.1`) | **In progress (frozen)** | CuteAFD `v6.0.0` | `B0 + B3–B6` at K4 (`30/42` MoE layers, `3.7674 bpw`, `+18.98 GiB`) vs `k325-rebuilt` & `k4-bf16core` (`320` replies): separates localized-outside-`B1–B2` (`≤ 19/320`) from diffuse/distributed (`≥ 25/320`) |
 | **Phase 4** — Cross-engine carry-over | **Blocked (`L3.3` FAIL)** | vLLM fork `v0.9.2` | Gate held: `K3.45-B1B2` did not advance |
 
 ---

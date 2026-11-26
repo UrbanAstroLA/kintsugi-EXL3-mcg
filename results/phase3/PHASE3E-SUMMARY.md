@@ -1,4 +1,4 @@
-# Phase 3 Stage 3E Summary — Matched-Library Control (`k325-rebuilt`) 8-Pass 127K Task Confirmation (`L3E.1`: `30/480` → `K4` Gain Is K4-Specific)
+# Phase 3 Stage 3E Summary — Matched-Library Control (`k325-rebuilt`) 8-Pass 127K Task Confirmation (`L3E.1`: `30/480` → K4-Specific Gain Supported)
 
 **Status:** Complete (`2026-11-26`) | **Engine:** CuteAFD `v6.0.0` (`sha256:f2bd29c7...`, BF16/F32 dense core, `max_tokens = 32,768`, concurrency `8`, `0` runtime warnings/errors) | **Protocol:** [`protocols/PHASE3E.md`](../../protocols/PHASE3E.md) (frozen at `9c7ae9c`)
 
@@ -6,20 +6,20 @@
 
 ## Executive Verdict (`L3E.1`, `[E3.11]–[E3.12]`)
 
-Running the matched stitched control **`k325-rebuilt`** (`K3-v1` + `K4-Core-K6` experts on `K3.25-v1` BF16/F32 core, exact `9,072`-projection K4 map) on all `8` paired passes (`480` 128K + `240` 4K replies, 1-to-1 on identical `reps 0–7` seeds `900M..907M`) produced four sharp, decisive conclusions:
+Running the matched stitched control **`k325-rebuilt`** (`K3-v1` + `K4-Core-K6` experts on `K3.25-v1` BF16/F32 core, exact `9,072`-projection K4 map) on all `8` paired passes (`480` 128K + `240` 4K replies, 1-to-1 on identical `reps 0–7` seeds `900M..907M`) yielded four findings:
 
 1. **Frozen `L3E.1` reading (`30/480 ≥ 30`):** **`k325-rebuilt ≈ k325-native` (`87.01%` vs `87.16%`; `30/480 = 6.25%` vs `35/480 = 7.29%` unfinished; halves consistent `17+13`, Fisher `p = 0.57`).**
-   - **`k4-bf16core − k325-rebuilt` = `+3.85 pp` (`z = +2.43`, `95% CI [+0.70, +6.93]`, DETECTED)** — proving K4's live 128K task gain (`30–35/480 → 15/480` unfinished) is **genuinely K4-specific**, not a quirk of native `K3.25-v1`.
-   - Stage 3D's `−0.347` nat `k325-rebuilt − k325-native` shift on `M_class(exit_10)` (`[E3.10]`) was therefore a **quantization-library probe artifact**, not the live task mechanism.
-2. **True matched-library effect of `B1–B2` (`k345-b1b2 − k325-rebuilt`) is zero across every live 128K metric:**
+   - **`k4-bf16core − k325-rebuilt` = `+3.85 pp` (`z = +2.43`, `95% CI [+0.70, +6.93]`, DETECTED)** — a K4-specific 128K task gain is supported against the matched stitched base (accuracy CI excludes `0`; unfinished-rate CI `[−6.25, 0.00]` touches `0`, and `30/480` sits at the frozen `≥ 30` boundary).
+   - Stage 3D's `−0.347` nat `k325-rebuilt − k325-native` shift on `M_class(exit_10)` (`[E3.10]`) registered a real library difference that shows up in `join` leaving behaviour (`9/22 = 40.9%` vs `8/28 = 28.6%`, `13` vs `20` unfinished), not a net reduction in unfinished replies (`ledger` moved in the opposite direction: `16` vs `14`).
+2. **True matched-library effect of `B1–B2` (`k345-b1b2 − k325-rebuilt`) shows no detected gain across every live 128K metric:**
    - Overall 128K accuracy: **`−0.10 pp`** (`86.90%` vs `87.01%`, `CI [−3.10, +2.86]`, `z = −0.07`).
    - 128K unfinished rate: **`+0.21 pp`** (`31/480 = 6.46%` vs `30/480 = 6.25%`, `CI [−2.71, +3.12]`; `k345-b1b2` 12-pass descriptive rate is also `45/720 = 6.25%`).
    - Paired both-finished 128K accuracy: **`−0.0015 pp`** (`CI [−1.11, +1.10]`).
-   - Upgrading `B1–B2 (L09–L20)` to 100% K4 (`+7.59 GiB`, `52.8%` untouched `≤ 14.4K` P-A KL, `80.2%` K4-authored `B_close`) delivered **no live 128K task recovery** over its exact matched stitched base.
+   - Upgrading `B1–B2 (L09–L20)` to 100% K4 (`+7.59 GiB`, `52.8%` untouched `≤ 14.4K` P-A KL, `80.2%` K4-authored `B_close`) showed no detected live 128K task recovery over its exact matched stitched base (ruling out a large effect; a small effect proportional to its `2/7` bit share, `~1.1 pp`, remains within the CI).
 3. **Detected cross-library stitching penalty on finished 128K reasoning (`[E3.12]`):**
    - Paired both-finished 128K accuracy for **`k325-rebuilt − k325-native` = `−1.44 pp` (`95% CI [−2.76, −0.14]`, DETECTED)** (`92.81%` `k325-rebuilt` and `92.90%` `k345-b1b2` vs `94.02%` single-run `K3.25-v1` and `93.79%` single-run `K4-Core-K6`).
-   - This explains the consistent `~1 pp` finished-only deficit previously observed across all three 4-pass blocks of `k345-b1b2` (`92.97 / 92.83 / 93.14%`): grafting experts across two independent `true_sequential` EXL3 calibration runs (`K3-v1` + `K4-Core-K6`) is invisible on `≤ 14.4K` P-A/P-B KL (`0.0006` nats) and `4K` tasks (`98.12%` vs `98.12%`), yet costs **`−1.44 pp`** on finished `128K` reasoning replies. Any production mixed-precision EXL3-MCG allocation must therefore be **re-quantized inline (`true_sequential: true`)** rather than deployed as a cross-run tensor graft.
-4. **Family nuance on `k325-rebuilt`:** `k325-rebuilt` partially reduced `join` unfinished replies (`13/160` vs `20/160` native; `join` leaving rate `9/22 = 40.9%` vs `8/28 = 28.6%`), while losing on `ledger` (`16/160` unf, `84.90%` fin-only vs `14/160`, `86.64%` native) and `trace` (`94.50%` vs `96.38%` fin-only), netting to `−0.16 pp` overall vs native.
+   - Both stitched arms built from two independently calibrated runs (`K3-v1` + `K4-Core-K6`) sit at this same `~92.8–92.9%` level across all 4-pass blocks, despite being invisible on `≤ 14.4K` P-A/P-B KL (`0.0006` nats) and `4K` tasks (`98.12%` vs `98.12%`). Whether a single-run `true_sequential` re-quantization of the same allocation avoids this deficit is untested (plausible hypothesis: sequential calibration fits each layer against activations from already-quantized earlier layers, so cross-run grafting mixes tensors calibrated against different upstream errors).
+4. **Family nuance on `k325-rebuilt`:** `k325-rebuilt` reduced `join` unfinished replies (`13/160` vs `20/160` native; `join` leaving rate `9/22 = 40.9%` vs `8/28 = 28.6%`), while losing on `ledger` (`16/160` unf, `84.90%` fin-only vs `14/160`, `86.64%` native) and `trace` (`94.50%` vs `96.38%` fin-only), netting to `−0.16 pp` overall vs native.
 
 ---
 

@@ -65,8 +65,15 @@ Following Kintsugi Step 5 (`R1–R6`): every line is written with a date before 
   - Matched stitched control `k325-rebuilt` showed `k325-rebuilt − k325-native = −0.3466` nats (`CI [−0.4817, −0.2182]`) at `exit_10` (`81%` of `k4 − native`), leaving `k4-bf16core − k325-rebuilt = −0.0805` (`CI [−0.1987, +0.0454]`, not detected). Stopped early during `b0-up-k4` rather than dividing 7 band effects by an undetected denominator.
 - **L3E.1 (Stage 3E — Matched-Library Control `k325-rebuilt` 8-Pass 127K Tasks — COMPLETE `[E3.11]–[E3.12]`, `protocols/PHASE3E.md`):**
   - `k325-rebuilt` (`reps 0–7`, `n = 480` 128K): **`87.01%`** overall (`fin_only = 92.81%`, **`30/480 = 6.25%` unfinished**, `17+13` halves `p = 0.57`).
-  - **Frozen reading (`≥ 30/480`):** **`k325-rebuilt ≈ k325-native`** (`−0.16 pp` `[−3.72, +3.70]`); **`k4-bf16core − k325-rebuilt = +3.85 pp` (`z = +2.43`, `[+0.70, +6.93]`, DETECTED)** → K4's live 128K task gain is K4-specific and `M_class`'s `−0.347` offset was a library probe artifact.
+  - **Frozen reading (`≥ 30/480`):** **`k325-rebuilt ≈ k325-native`** (`−0.16 pp` `[−3.72, +3.70]`); **`k4-bf16core − k325-rebuilt = +3.85 pp` (`z = +2.43`, `[+0.70, +6.93]`, DETECTED)** → K4-specific 128K task gain is supported (unfinished CI `[−6.25, 0.00]` touches `0`; `30/480` at frozen boundary), and `M_class`'s `−0.347` offset registered a library difference in `join` leaving (`40.9%` vs `28.6%`), not a net unfinished reduction.
   - Matched-library `k345-b1b2 − k325-rebuilt` = `−0.10 pp` overall (`[−3.10, +2.86]`), `+0.21 pp` unf (`[−2.71, +3.12]`), `−0.00 pp` both-finished (`[−1.11, +1.10]`). Detected cross-library stitching penalty on finished 128K replies: `k325-rebuilt − k325-native` both-finished = **`−1.44 pp` (`[−2.76, −0.14]`)**.
+- **L3F.1 (Stage 3F — Complement Graft `k377-not-b1b2` 8-Pass `join + ledger` 127K Tasks — FROZEN `2026-11-26` in `protocols/PHASE3F.md`, pending execution):**
+  - Arm: `k377-not-b1b2` (`B0 [L03–L08]` + `B3–B6 [L21–L44]` at 100% K4; `B1–B2 [L09–L20]` kept at `k325-rebuilt`; `30/42` MoE layers at K4, `+18.98 GiB`, `3.7674 bpw`).
+  - Suite: `128K`-only, `join + ledger` (`40` items × `8` passes = `320` replies, exact paired `reps 0–7` seeds `900M..907M`; captures `97.3%` [`108/111`] of all 128K unfinished replies across existing arms; anchor baseline `k4-bf16core − k325-rebuilt`: `+4.84 pp` `[+0.39, +9.22]`, unf `−4.69 pp` `[−9.06, −0.31]`, BOTH CIs exclude `0`).
+  - Pre-registered reading bands on `k377-not-b1b2` `join + ledger` `128K` unfinished count (out of `320`):
+    - **`≤ 19 / 320` (`≤ 5.94%`):** `k377-not-b1b2 ≈ k4-bf16core` (`14/320`) → 128K runaway stability is localized outside `B1–B2` (disjoint from `≤ 14.4K` KL).
+    - **`≥ 25 / 320` (`≥ 7.81%`):** `k377-not-b1b2 ≈ k325-rebuilt` (`29/320`) → neither `B1–B2` nor its `5/7` complement recovers K4's stability alone (diffuse / super-additive across depth).
+    - **`20–24 / 320`:** intermediate / partial recovery.
 
 ---
 
