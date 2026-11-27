@@ -2,9 +2,9 @@
 
 Applying the [Kintsugi method](https://github.com/professorpalmer/kintsugi-method) (Palmer, 2026) — task-gated, empirical mixed-precision bit allocation — to **EXL3 MCG** routed experts on **GLM-5.3-Flash** (`K3.25` base quant, 2× RTX PRO 6000 Blackwell Max-Q, 300 W).
 
-> **Goal:** Take a practical, high-headroom quantization (`K3.25-v1`, 4.71M KV tokens on vLLM v0.9.2) and repair its task-failing layers/bands so it closes the gap toward higher-precision K4 quants at minimal extra byte cost — testing both **targeted band upgrades (`K3.35–K3.45`)** and **iso-bitrate reallocation (`K3.25`)**.
+> **Outcome (Study Complete — `2026-11-26`):** See [`results/FINAL-SYNTHESIS.md`](results/FINAL-SYNTHESIS.md). On `K3.25-v1` (unquantized BF16/F32 dense core), short-context KL and held-out margins localized sharply to `B1–B2 (L09–L20)` (`52.8%` untouched P-A KL, `80.2%` K4-authored `B_close`; `23.7%` P-A KL at `0 B`), but **failed to transfer to live `128K` task stability** (`k345 − rebuilt = −0.10 pp`, `31` vs `30/480` unf). Testing the `5/7` complement (`k377-not-b1b2`, `+18.98 GiB`, `30/42` layers K4) recovered only roughly half the gap (`22/320` vs `29 → 14/320`, matching K4 on `join` while leaving `ledger` at `13` vs `6/160`), ruling out a sparse band repair on `K3.25-v1`. Cross-library intra-layer stitching also incurred a `−1.44 pp` `[−2.76, −0.14]` finished-only `128K` penalty (`[E3.12]`). Phase 4 (`vLLM v0.9.2`) was held closed.
 >
-> **Engine scope:** Primary search and localization run on **CuteAFD v6.0.0** (pinned by digest `sha256:f2bd29c7...`; chosen for bitwise prefill determinism, ~3× faster restarts than vLLM v0.9.2, native inline `/v1/bench/probe` margin scoring, and unquantized BF16/F32 dense-core execution on plain checkpoints). Held-out cross-engine confirmation tests carry-over onto **tpurtell's vLLM fork v0.9.2** (`sha256:ea0430aa`, `TP=2`, `EP=1`). No result is claimed for any engine version other than the one measured.
+> **Engine scope:** Primary search and localization ran on **CuteAFD v6.0.0** (pinned by digest `sha256:f2bd29c7...`; chosen for bitwise prefill determinism, ~3× faster restarts than vLLM v0.9.2, native inline `/v1/bench/probe` margin scoring, and unquantized BF16/F32 dense-core execution on plain checkpoints). No result is claimed for any engine version other than the one measured.
 
 ---
 
@@ -27,6 +27,7 @@ A complete `K ∈ {3, 4}` MCG EXL3 fit library (`mcg_multiplier = 3417055213`, i
 
 | Path | Purpose |
 |---|---|
+| [`results/FINAL-SYNTHESIS.md`](results/FINAL-SYNTHESIS.md) | **Final study synthesis** — full verdict across Phases 0–3F, gate ledger (`L0.1–L3F.1`), and practical takeaways |
 | [`docs/PLAN.md`](docs/PLAN.md) | Staged, decision-driven experimental plan (Phases 0–4) with power statements and go/no-go gates |
 | [`docs/BASELINES.md`](docs/BASELINES.md) | Published baseline numbers from `cuteafd-eval` and `local-inference-evals` |
 | [`docs/PHASE0-INVENTORY.md`](docs/PHASE0-INVENTORY.md) | Zero-GPU checkpoint audit, byte-identity checks, and loader contract verification |
@@ -64,7 +65,7 @@ A complete `K ∈ {3, 4}` MCG EXL3 fit library (`mcg_multiplier = 3417055213`, i
 | **Phase 3D** — 7-band loop-exit scan (`k325-rebuilt` + `B0..B6`, `L3D.1`) | **Stopped Early (`[E3.10]`)** | CuteAFD `v6.0.0` | Arm #0 `k325-rebuilt − k325-native = −0.347` nats (`81%` of `K4 − native`), leaving `K4 − rebuilt = −0.081` (not detected at `exit_10`); stopped during `B0` |
 | **Phase 3E** — Matched-library control `k325-rebuilt` 8-pass `127K` tasks (`L3E.1`) | **Complete (`30/480` unf)** | CuteAFD `v6.0.0` | `k325-rebuilt` `87.01%` (`30/480` unf, `p=0.57` halves) ≈ `k325-native` (`35/480`); **`K4 − rebuilt = +3.85 pp` (`[+0.70, +6.93]`)** supports K4-specific task gain; **`k345 − rebuilt = −0.10 pp`** (no detected B1–B2 gain); **`−1.44 pp` (`[−2.76, −0.14]`)** both-finished cross-library stitching penalty |
 | **Phase 3F** — Complement graft `k377-not-b1b2` 8-pass `join+ledger` `127K` (`L3F.1`) | **Complete (`22/320` unf)** | CuteAFD `v6.0.0` | `B0 + B3–B6` at K4 (`30/42` layers, `+18.98 GiB`, `69%` of K4 bytes): **`86.33%`**, **`22/320` unf (`11+11`, `p=1.00`)** — intermediate/partial (`~50%` of K4 gap); matches K4 on `join` (`9` vs `8`, `13/160` entries), leaves `ledger` near base (`13` vs `6`); rules out a sparse band repair |
-| **Phase 4** — Cross-engine carry-over | **Blocked (`L3.3` FAIL)** | vLLM fork `v0.9.2` | Gate held: `K3.45-B1B2` did not advance |
+| **Phase 4** — Cross-engine carry-over | **Closed (not run)** | vLLM fork `v0.9.2` | Gate held: no sparse `K3.25` repair cleared `L3.3` |
 
 ---
 
